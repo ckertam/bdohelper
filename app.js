@@ -295,8 +295,12 @@ function render() {
   const selectedId = itemSelect.value;
 
   const tree = document.getElementById("tree");
+  const main = document.querySelector("main");
   tree.innerHTML = "";
-  if (!selectedId || targetQty <= 0) return;
+  if (!selectedId || targetQty <= 0) {
+    main.classList.remove("has-results");
+    return;
+  }
 
   const results = computeAll(selectedId, targetQty);
 
@@ -308,9 +312,11 @@ function render() {
   });
 
   const s = t();
-  SECTION_ORDER.forEach((sec) => {
+  const activeSections = SECTION_ORDER.filter((sec) => bySection[sec] && bySection[sec].length > 0);
+  main.classList.toggle("has-results", activeSections.length > 0);
+
+  activeSections.forEach((sec, idx) => {
     const items = bySection[sec];
-    if (!items || items.length === 0) return;
 
     const section = document.createElement("section");
     section.className = "tier-section";
@@ -330,6 +336,14 @@ function render() {
 
     section.appendChild(cardsWrap);
     tree.appendChild(section);
+
+    if (idx < activeSections.length - 1) {
+      const arrow = document.createElement("div");
+      arrow.className = "funnel-arrow";
+      arrow.textContent = "→";
+      arrow.setAttribute("aria-hidden", "true");
+      tree.appendChild(arrow);
+    }
   });
 }
 

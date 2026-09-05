@@ -93,6 +93,19 @@ main {
   padding: 20px 16px 60px;
 }
 
+main.has-results {
+  max-width: none;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+main.has-results .controls,
+main.has-results .legend {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .controls {
   display: flex;
   flex-wrap: wrap;
@@ -181,22 +194,72 @@ select:focus, input:focus {
 
 .tree {
   display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
+
+.tier-section {
+  flex: 1 1 300px;
+  min-width: 280px;
+  max-width: 360px;
+  display: flex;
   flex-direction: column;
-  gap: 24px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-height: calc(100vh - 260px);
+  min-height: 200px;
 }
 
 .tier-section h2 {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   color: var(--accent);
-  margin: 0 0 10px;
-  padding-bottom: 6px;
+  margin: 0;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
+  background: var(--bg-alt);
+  position: sticky;
+  top: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
 .tier-cards {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.funnel-arrow {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  align-self: stretch;
+  color: var(--border);
+  font-size: 1.4rem;
+}
+
+@media (max-width: 900px) {
+  .tree {
+    flex-direction: column;
+    overflow-x: visible;
+  }
+  .tier-section {
+    max-width: none;
+    max-height: none;
+  }
+  .tier-cards {
+    overflow-y: visible;
+  }
+  .funnel-arrow {
+    display: none;
+  }
 }
 
 .node {
