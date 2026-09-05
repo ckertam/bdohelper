@@ -11,9 +11,42 @@
 
 const STORAGE_KEY = "bdohelper_stock_v1";
 const LANG_KEY = "bdohelper_lang_v1";
+const MASTERY_KEY = "bdohelper_mastery_v1";
+
+// bdocodex.com/us/alchemymastery/ — Simya Mastery seviyesine göre "Ürün Miktarı Artışı" (%).
+// [mastery, productAmountIncreasePercent], mastery'ye göre artan sırada, 50 puanlık aralıklarla.
+// Aradaki değerler için doğrusal enterpolasyon yapılır. Sadece garanti/ortalama üretim miktarını
+// artıran bu ana etken kullanılıyor; ek "özel/nadir ürün" şans bonusları hesaba katılmıyor.
+const MASTERY_TABLE = [
+  [0, 0.00], [50, 5.76], [100, 6.35], [150, 6.97], [200, 7.62], [250, 8.29],
+  [300, 9.00], [350, 9.73], [400, 10.50], [450, 11.29], [500, 12.11], [550, 12.96],
+  [600, 13.84], [650, 14.75], [700, 15.68], [750, 16.65], [800, 17.64], [850, 18.66],
+  [900, 19.71], [950, 20.79], [1000, 21.90], [1050, 23.04], [1100, 24.21], [1150, 25.40],
+  [1200, 26.63], [1250, 27.88], [1300, 29.16], [1350, 30.47], [1400, 31.81], [1450, 33.18],
+  [1500, 34.57], [1550, 36.00], [1600, 37.45], [1650, 38.94], [1700, 40.45], [1750, 41.99],
+  [1800, 43.56], [1850, 45.16], [1900, 46.79], [1950, 48.44], [2000, 50.00], [2050, 50.63],
+  [2100, 51.25], [2150, 51.88], [2200, 52.50], [2250, 53.13], [2300, 53.75], [2350, 54.38],
+  [2400, 55.00], [2450, 55.63], [2500, 56.25], [2550, 56.88], [2600, 57.50], [2650, 58.13],
+  [2700, 58.75], [2750, 59.38], [2800, 60.00], [2850, 60.63], [2900, 61.25], [2950, 61.88],
+  [3000, 62.50]
+];
+
+function getMasteryBonusPercent(mastery) {
+  const m = Math.max(0, Math.min(3000, mastery || 0));
+  for (let i = 0; i < MASTERY_TABLE.length - 1; i++) {
+    const [lvl0, val0] = MASTERY_TABLE[i];
+    const [lvl1, val1] = MASTERY_TABLE[i + 1];
+    if (m >= lvl0 && m <= lvl1) {
+      const ratio = lvl1 === lvl0 ? 0 : (m - lvl0) / (lvl1 - lvl0);
+      return val0 + (val1 - val0) * ratio;
+    }
+  }
+  return 0;
+}
 
 let stock = loadStock();
 let lang = loadLang();
+let mastery = loadMastery();
 
 function loadStock() {
   try {
@@ -49,6 +82,23 @@ function saveLang() {
   }
 }
 
+function loadMastery() {
+  try {
+    const raw = parseInt(localStorage.getItem(MASTERY_KEY), 10);
+    return Number.isFinite(raw) ? Math.max(0, Math.min(3000, raw)) : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function saveMastery() {
+  try {
+    localStorage.setItem(MASTERY_KEY, String(mastery));
+  } catch (e) {
+    /* no-op */
+  }
+}
+
 const STRINGS = {
   tr: {
     title: "BDO Helper",
@@ -56,12 +106,15 @@ const STRINGS = {
     whatToMake: "Ne üretmek istiyorsun?",
     searchPlaceholder: "Ürün ara...",
     howMany: "Kaç adet üretmek istiyorsun?",
+    masteryLabel: "Simya Mastery (0-3000)",
+    masteryHint: (pct) => (pct > 0 ? `→ üretimde +%${pct} verim` : ""),
     resetStock: "Tüm stokları sıfırla",
     legendMissing: "Eksik / toplaman gereken",
     legendOk: "Elindeki stok yeterli",
     legendRaw: "Ham madde (üretilmez, toplanır/satın alınır)",
     rawBadge: "Ham Madde",
     batchesBadge: (n, out) => `${n}x üretim (${out} adet çıkar)`,
+    batchesBadgeMastery: (n, out) => `${n}x üretim (~${out} adet çıkar, Mastery dahil)`,
     totalRequired: "Toplam gerekli",
     missing: (n) => `${n} eksik`,
     sufficient: "yeterli",
@@ -81,12 +134,15 @@ const STRINGS = {
     whatToMake: "What do you want to craft?",
     searchPlaceholder: "Search item...",
     howMany: "How many do you want to craft?",
+    masteryLabel: "Alchemy Mastery (0-3000)",
+    masteryHint: (pct) => (pct > 0 ? `→ +${pct}% yield` : ""),
     resetStock: "Reset all stock",
     legendMissing: "Missing / need to gather",
     legendOk: "You have enough in stock",
     legendRaw: "Raw material (not crafted — gather/hunt/buy)",
     rawBadge: "Raw Material",
     batchesBadge: (n, out) => `${n}x craft (yields ${out})`,
+    batchesBadgeMastery: (n, out) => `${n}x craft (~${out} yielded, Mastery incl.)`,
     totalRequired: "Total required",
     missing: (n) => `${n} missing`,
     sufficient: "sufficient",
@@ -121,7 +177,11 @@ function getItem(id) {
 }
 
 // Hedeflenen kök madde + miktardan yola çıkarak tüm ağacı hesaplar.
-function computeAll(rootId, targetQty) {
+// masteryPct: Simya Mastery'nin verdiği "Ürün Miktarı Artışı" (%) — her tarifin
+// çıktısına uygulanır (örn. Mastery 2000 -> output_qty * 1.50), böylece yüksek
+// Mastery'de aynı hedefe ulaşmak için daha az üretim/ham madde gerekir.
+function computeAll(rootId, targetQty, masteryPct) {
+  const yieldMultiplier = 1 + (masteryPct || 0) / 100;
   // 1) Ulaşılabilir madde kümesi + her maddenin kaç farklı "üst" madde
   //    tarafından talep edildiğini (inDegree) bul.
   const usedBy = {};
@@ -166,10 +226,11 @@ function computeAll(rootId, targetQty) {
     const missing = Math.max(0, required - have);
     let batches = 0;
     let producedQty = 0;
+    let effectiveOutputQty = item.recipe ? item.recipe.output_qty * yieldMultiplier : null;
 
     if (item.recipe && missing > 0) {
-      batches = Math.ceil(missing / item.recipe.output_qty);
-      producedQty = batches * item.recipe.output_qty;
+      batches = Math.ceil(missing / effectiveOutputQty);
+      producedQty = Math.round(batches * effectiveOutputQty);
     }
 
     result[id] = {
@@ -232,7 +293,9 @@ function renderCard(node, allResults) {
   } else if (node.batches) {
     const badge = document.createElement("span");
     badge.className = "badge";
-    badge.textContent = s.batchesBadge(node.batches, node.producedQty);
+    badge.textContent = mastery > 0
+      ? s.batchesBadgeMastery(node.batches, node.producedQty)
+      : s.batchesBadge(node.batches, node.producedQty);
     row.appendChild(badge);
   }
 
@@ -302,7 +365,7 @@ function render() {
     return;
   }
 
-  const results = computeAll(selectedId, targetQty);
+  const results = computeAll(selectedId, targetQty, getMasteryBonusPercent(mastery));
 
   const bySection = {};
   Object.values(results).forEach((node) => {
@@ -408,6 +471,8 @@ function applyStaticText() {
   document.getElementById("whatToMakeLabel").textContent = s.whatToMake;
   document.getElementById("itemSearch").placeholder = s.searchPlaceholder;
   document.getElementById("howManyLabel").textContent = s.howMany;
+  document.getElementById("masteryLabel").textContent = s.masteryLabel;
+  updateMasteryHint();
   document.getElementById("resetStockBtn").textContent = s.resetStock;
   document.getElementById("legendMissing").textContent = s.legendMissing;
   document.getElementById("legendOk").textContent = s.legendOk;
@@ -421,6 +486,12 @@ function applyStaticText() {
   });
 }
 
+function updateMasteryHint() {
+  const s = t();
+  const pct = Math.round(getMasteryBonusPercent(mastery) * 10) / 10;
+  document.getElementById("masteryHint").textContent = s.masteryHint(pct);
+}
+
 function setLang(newLang) {
   if (newLang !== "tr" && newLang !== "en") return;
   lang = newLang;
@@ -432,6 +503,7 @@ function setLang(newLang) {
 }
 
 function init() {
+  document.getElementById("masteryInput").value = mastery;
   applyStaticText();
   populateSelect(false);
 
@@ -439,6 +511,12 @@ function init() {
   document.getElementById("targetQty").addEventListener("input", render);
   document.getElementById("itemSearch").addEventListener("input", (e) => {
     filterSelectOptions(e.target.value);
+    render();
+  });
+  document.getElementById("masteryInput").addEventListener("input", (e) => {
+    mastery = Math.max(0, Math.min(3000, parseInt(e.target.value, 10) || 0));
+    saveMastery();
+    updateMasteryHint();
     render();
   });
 

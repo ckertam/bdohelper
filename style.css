@@ -133,6 +133,12 @@ main.has-results .legend {
   margin-bottom: 2px;
 }
 
+.mastery-hint {
+  font-size: 0.78rem;
+  color: var(--accent);
+  min-height: 1em;
+}
+
 label {
   font-size: 0.85rem;
   color: var(--text-dim);
