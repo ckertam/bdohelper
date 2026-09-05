@@ -269,7 +269,7 @@ function sectionOf(node) {
   return node.tier || "craftable";
 }
 
-const SECTION_ORDER = ["final", "mid", "craftable", "raw"];
+const SECTION_ORDER = ["raw", "craftable", "mid", "final"];
 
 function renderCard(node, allResults) {
   const s = t();
@@ -278,6 +278,16 @@ function renderCard(node, allResults) {
 
   const row = document.createElement("div");
   row.className = "node-row";
+
+  const item = getItem(node.id);
+  if (item.icon) {
+    const icon = document.createElement("img");
+    icon.className = "node-icon";
+    icon.src = item.icon;
+    icon.alt = "";
+    icon.loading = "lazy";
+    row.appendChild(icon);
+  }
 
   const { primary, secondary } = nameFor(node);
   const nameDiv = document.createElement("div");
