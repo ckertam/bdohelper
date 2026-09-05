@@ -8,34 +8,39 @@
 </head>
 <body>
 <header class="topbar">
-  <h1>BDO Helper</h1>
-  <p class="subtitle">Simya (Alchemy) ham madde hesaplayıcısı</p>
+  <div class="lang-toggle" role="group" aria-label="Language / Dil">
+    <button type="button" class="lang-btn" data-lang="tr">TR</button>
+    <button type="button" class="lang-btn" data-lang="en">EN</button>
+  </div>
+  <h1 id="pageTitle">BDO Helper</h1>
+  <p class="subtitle" id="pageSubtitle">Simya (Alchemy) ham madde hesaplayıcısı</p>
 </header>
 
 <main>
   <section class="controls" aria-label="Hesaplama ayarları">
-    <div class="control-group">
-      <label for="itemSelect">Ne üretmek istiyorsun?</label>
+    <div class="control-group control-group-wide">
+      <label for="itemSelect" id="whatToMakeLabel">Ne üretmek istiyorsun?</label>
+      <input type="text" id="itemSearch" placeholder="Ürün ara...">
       <select id="itemSelect"></select>
     </div>
     <div class="control-group">
-      <label for="targetQty">Kaç adet üretmek istiyorsun?</label>
+      <label for="targetQty" id="howManyLabel">Kaç adet üretmek istiyorsun?</label>
       <input type="number" id="targetQty" min="1" step="1" value="10">
     </div>
     <button id="resetStockBtn" class="secondary-btn" type="button">Tüm stokları sıfırla</button>
   </section>
 
   <section class="legend">
-    <span class="legend-item"><span class="dot need"></span> Eksik / toplaman gereken</span>
-    <span class="legend-item"><span class="dot ok"></span> Elindeki stok yeterli</span>
-    <span class="legend-item"><span class="dot raw"></span> Ham madde (üretilmez, toplanır/satın alınır)</span>
+    <span class="legend-item"><span class="dot need"></span> <span id="legendMissing">Eksik / toplaman gereken</span></span>
+    <span class="legend-item"><span class="dot ok"></span> <span id="legendOk">Elindeki stok yeterli</span></span>
+    <span class="legend-item"><span class="dot raw"></span> <span id="legendRaw">Ham madde (üretilmez, toplanır/satın alınır)</span></span>
   </section>
 
   <section id="tree" class="tree" aria-label="İhtiyaç ağacı"></section>
 </main>
 
 <footer>
-  <p>Veriler <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a> kaynak alınarak hazırlanmıştır. Oyun içi güncellemelerle miktarlar değişebilir.</p>
+  <p id="footerText">Veriler <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a> kaynak alınarak hazırlanmıştır. Oyun içi güncellemelerle miktarlar değişebilir.</p>
 </footer>
 
 <script src="data.js"></script>

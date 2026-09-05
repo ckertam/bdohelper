@@ -37,10 +37,42 @@ body {
 }
 
 .topbar {
+  position: relative;
   padding: 24px 20px 16px;
   text-align: center;
   border-bottom: 1px solid var(--border);
   background: var(--bg-alt);
+}
+
+.lang-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.lang-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.lang-btn.active {
+  background: var(--accent);
+  color: #1a1a1a;
+}
+
+.lang-btn:not(.active):hover {
+  color: var(--text);
+  background: var(--card);
 }
 
 .topbar h1 {
@@ -78,6 +110,14 @@ main {
   flex-direction: column;
   gap: 6px;
   flex: 1 1 220px;
+}
+
+.control-group-wide {
+  flex: 2 1 320px;
+}
+
+#itemSearch {
+  margin-bottom: 2px;
 }
 
 label {

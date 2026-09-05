@@ -10,8 +10,10 @@
 // otomatik olarak sıfıra iner (huni/funnel mantığı).
 
 const STORAGE_KEY = "bdohelper_stock_v1";
+const LANG_KEY = "bdohelper_lang_v1";
 
 let stock = loadStock();
+let lang = loadLang();
 
 function loadStock() {
   try {
@@ -30,6 +32,86 @@ function saveStock() {
   }
 }
 
+function loadLang() {
+  try {
+    const raw = localStorage.getItem(LANG_KEY);
+    return raw === "en" ? "en" : "tr";
+  } catch (e) {
+    return "tr";
+  }
+}
+
+function saveLang() {
+  try {
+    localStorage.setItem(LANG_KEY, lang);
+  } catch (e) {
+    /* no-op */
+  }
+}
+
+const STRINGS = {
+  tr: {
+    title: "BDO Helper",
+    subtitle: "Simya (Alchemy) ham madde hesaplayıcısı",
+    whatToMake: "Ne üretmek istiyorsun?",
+    searchPlaceholder: "Ürün ara...",
+    howMany: "Kaç adet üretmek istiyorsun?",
+    resetStock: "Tüm stokları sıfırla",
+    legendMissing: "Eksik / toplaman gereken",
+    legendOk: "Elindeki stok yeterli",
+    legendRaw: "Ham madde (üretilmez, toplanır/satın alınır)",
+    rawBadge: "Ham Madde",
+    batchesBadge: (n, out) => `${n}x üretim (${out} adet çıkar)`,
+    totalRequired: "Toplam gerekli",
+    missing: (n) => `${n} eksik`,
+    sufficient: "yeterli",
+    inStock: "Elimde:",
+    usedIn: "Kullanıldığı yer(ler):",
+    footer: 'Veriler <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a> kaynak alınarak hazırlanmıştır. Oyun içi güncellemelerle miktarlar değişebilir.',
+    sections: {
+      final: "Ana Ürün",
+      mid: "Ara İksirler",
+      craftable: "Simya Ürünleri (İksir / Reaktif / Kristal vb.)",
+      raw: "Ham Maddeler / Satın Alınanlar"
+    }
+  },
+  en: {
+    title: "BDO Helper",
+    subtitle: "Alchemy raw-material calculator",
+    whatToMake: "What do you want to craft?",
+    searchPlaceholder: "Search item...",
+    howMany: "How many do you want to craft?",
+    resetStock: "Reset all stock",
+    legendMissing: "Missing / need to gather",
+    legendOk: "You have enough in stock",
+    legendRaw: "Raw material (not crafted — gather/hunt/buy)",
+    rawBadge: "Raw Material",
+    batchesBadge: (n, out) => `${n}x craft (yields ${out})`,
+    totalRequired: "Total required",
+    missing: (n) => `${n} missing`,
+    sufficient: "sufficient",
+    inStock: "In stock:",
+    usedIn: "Used in:",
+    footer: 'Data sourced from <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a>. Quantities may change with game updates.',
+    sections: {
+      final: "Final Product",
+      mid: "Intermediate Draughts",
+      craftable: "Alchemy Products (Elixirs / Reagents / Crystals etc.)",
+      raw: "Raw Materials / Purchased Items"
+    }
+  }
+};
+
+function t() {
+  return STRINGS[lang];
+}
+
+function nameFor(item) {
+  const primary = lang === "tr" ? item.name_tr : item.name_en;
+  const secondary = lang === "tr" ? item.name_en : item.name_tr;
+  return { primary: primary || secondary || "?", secondary: secondary || "" };
+}
+
 function getItem(id) {
   const item = RECIPES.items[id];
   if (!item) {
@@ -39,7 +121,6 @@ function getItem(id) {
 }
 
 // Hedeflenen kök madde + miktardan yola çıkarak tüm ağacı hesaplar.
-// Dönen değer: { itemId: { ...sonuç }, usedBy: { itemId: [parentId, ...] } }
 function computeAll(rootId, targetQty) {
   // 1) Ulaşılabilir madde kümesi + her maddenin kaç farklı "üst" madde
   //    tarafından talep edildiğini (inDegree) bul.
@@ -66,9 +147,6 @@ function computeAll(rootId, targetQty) {
   });
 
   // 2) Kök maddeden başlayarak talebi aşağı doğru dağıt (Kahn benzeri sıralama).
-  //    Bir madde ancak KENDİSİNİ isteyen tüm üst maddeler işlendikten sonra
-  //    (inDegree sıfıra inince) işlenir — böylece toplam talep kesinleşmeden
-  //    stok düşülmez.
   const demand = {};
   visited.forEach((id) => { demand[id] = 0; });
   demand[rootId] = targetQty;
@@ -100,8 +178,10 @@ function computeAll(rootId, targetQty) {
       name_en: item.name_en,
       tier: item.tier || null,
       isRaw: !item.recipe,
-      note: item.note || null,
-      source: item.source || null,
+      note_tr: item.note_tr || null,
+      note_en: item.note_en || null,
+      source_tr: item.source_tr || null,
+      source_en: item.source_en || null,
       required,
       have,
       missing,
@@ -125,53 +205,49 @@ function computeAll(rootId, targetQty) {
 
 function sectionOf(node) {
   if (node.isRaw) return "raw";
-  return node.tier || "base";
+  return node.tier || "craftable";
 }
 
-const SECTION_LABELS = {
-  final: "Ana Ürün",
-  mid: "Ara İksirler",
-  base: "Temel İksirler",
-  raw: "Ham Maddeler / Satın Alınanlar"
-};
-const SECTION_ORDER = ["final", "mid", "base", "raw"];
+const SECTION_ORDER = ["final", "mid", "craftable", "raw"];
 
 function renderCard(node, allResults) {
+  const s = t();
   const wrap = document.createElement("div");
   wrap.className = "node";
 
   const row = document.createElement("div");
   row.className = "node-row";
 
+  const { primary, secondary } = nameFor(node);
   const nameDiv = document.createElement("div");
   nameDiv.className = "node-name";
-  nameDiv.innerHTML = `${node.name_tr}<span class="en">${node.name_en || ""}</span>`;
+  nameDiv.innerHTML = `${primary}<span class="en">${secondary}</span>`;
   row.appendChild(nameDiv);
 
   if (node.isRaw) {
     const badge = document.createElement("span");
     badge.className = "badge raw";
-    badge.textContent = "Ham Madde";
+    badge.textContent = s.rawBadge;
     row.appendChild(badge);
   } else if (node.batches) {
     const badge = document.createElement("span");
     badge.className = "badge";
-    badge.textContent = `${node.batches}x üretim (${node.producedQty} adet çıkar)`;
+    badge.textContent = s.batchesBadge(node.batches, node.producedQty);
     row.appendChild(badge);
   }
 
   const qtyInfo = document.createElement("div");
   qtyInfo.className = "qty-info";
   const missingSpan = node.missing > 0
-    ? `<span class="missing">${node.missing} eksik</span>`
-    : `<span class="satisfied">yeterli</span>`;
-  qtyInfo.innerHTML = `<span>Toplam gerekli: <b>${node.required}</b></span>${missingSpan}`;
+    ? `<span class="missing">${s.missing(node.missing)}</span>`
+    : `<span class="satisfied">${s.sufficient}</span>`;
+  qtyInfo.innerHTML = `<span>${s.totalRequired}: <b>${node.required}</b></span>${missingSpan}`;
   row.appendChild(qtyInfo);
 
   const stockWrap = document.createElement("div");
   stockWrap.className = "stock-input";
   const label = document.createElement("label");
-  label.textContent = "Elimde:";
+  label.textContent = s.inStock;
   const input = document.createElement("input");
   input.type = "number";
   input.min = "0";
@@ -187,25 +263,27 @@ function renderCard(node, allResults) {
 
   if (node.usedBy && node.usedBy.length > 0) {
     const usedByNames = node.usedBy
-      .map((pid) => (allResults[pid] ? allResults[pid].name_tr : pid))
+      .map((pid) => (allResults[pid] ? nameFor(allResults[pid]).primary : pid))
       .join(", ");
     const usedByDiv = document.createElement("div");
     usedByDiv.className = "note-text";
-    usedByDiv.textContent = `🔗 Kullanıldığı yer(ler): ${usedByNames}`;
+    usedByDiv.textContent = `🔗 ${s.usedIn} ${usedByNames}`;
     wrap.appendChild(usedByDiv);
   }
 
-  if (node.source) {
+  const source = lang === "tr" ? node.source_tr : node.source_en;
+  const note = lang === "tr" ? node.note_tr : node.note_en;
+  if (source) {
     const src = document.createElement("div");
     src.className = "note-text";
-    src.textContent = `📍 ${node.source}`;
+    src.textContent = `📍 ${source}`;
     wrap.appendChild(src);
   }
-  if (node.note) {
-    const note = document.createElement("div");
-    note.className = "note-text";
-    note.textContent = `ℹ ${node.note}`;
-    wrap.appendChild(note);
+  if (note) {
+    const noteDiv = document.createElement("div");
+    noteDiv.className = "note-text";
+    noteDiv.textContent = `ℹ ${note}`;
+    wrap.appendChild(noteDiv);
   }
 
   return wrap;
@@ -229,6 +307,7 @@ function render() {
     bySection[sec].push(node);
   });
 
+  const s = t();
   SECTION_ORDER.forEach((sec) => {
     const items = bySection[sec];
     if (!items || items.length === 0) return;
@@ -237,14 +316,14 @@ function render() {
     section.className = "tier-section";
 
     const heading = document.createElement("h2");
-    heading.textContent = SECTION_LABELS[sec] || sec;
+    heading.textContent = s.sections[sec] || sec;
     section.appendChild(heading);
 
     const cardsWrap = document.createElement("div");
     cardsWrap.className = "tier-cards";
 
     items
-      .sort((a, b) => a.name_tr.localeCompare(b.name_tr, "tr"))
+      .sort((a, b) => nameFor(a).primary.localeCompare(nameFor(b).primary, lang))
       .forEach((node) => {
         cardsWrap.appendChild(renderCard(node, results));
       });
@@ -254,47 +333,104 @@ function render() {
   });
 }
 
-const TIER_LABELS = {
-  final: "Ana Ürün",
-  mid: "Ara İksirler",
-  base: "Temel İksirler"
-};
-const TIER_ORDER = ["final", "mid", "base"];
-
-function populateSelect() {
+function populateSelect(preserveSelection) {
   const itemSelect = document.getElementById("itemSelect");
+  const prevValue = preserveSelection ? itemSelect.value : null;
   itemSelect.innerHTML = "";
 
-  const byTier = {};
+  const byTier = { final: [], mid: [], craftable: [] };
   Object.entries(RECIPES.items).forEach(([id, item]) => {
     if (!item.recipe) return; // sadece üretilebilen maddeler seçilebilir
-    const tier = item.tier || "base";
+    const tier = item.tier || "craftable";
     if (!byTier[tier]) byTier[tier] = [];
     byTier[tier].push({ id, item });
   });
 
-  TIER_ORDER.forEach((tier) => {
+  const s = t();
+  ["final", "mid", "craftable"].forEach((tier) => {
     const group = byTier[tier];
     if (!group || group.length === 0) return;
     const optgroup = document.createElement("optgroup");
-    optgroup.label = TIER_LABELS[tier] || tier;
+    optgroup.label = s.sections[tier] || tier;
     group
-      .sort((a, b) => a.item.name_tr.localeCompare(b.item.name_tr, "tr"))
+      .sort((a, b) => nameFor(a.item).primary.localeCompare(nameFor(b.item).primary, lang))
       .forEach(({ id, item }) => {
+        const { primary, secondary } = nameFor(item);
         const opt = document.createElement("option");
         opt.value = id;
-        opt.textContent = `${item.name_tr} (${item.name_en || ""})`;
+        opt.textContent = secondary ? `${primary} (${secondary})` : primary;
         optgroup.appendChild(opt);
       });
     itemSelect.appendChild(optgroup);
   });
+
+  if (prevValue && RECIPES.items[prevValue]) {
+    itemSelect.value = prevValue;
+  }
+}
+
+function filterSelectOptions(query) {
+  const itemSelect = document.getElementById("itemSelect");
+  const q = query.trim().toLocaleLowerCase(lang);
+  let firstVisible = null;
+  Array.from(itemSelect.querySelectorAll("option")).forEach((opt) => {
+    const matches = !q || opt.textContent.toLocaleLowerCase(lang).includes(q);
+    opt.hidden = !matches;
+    if (matches && !firstVisible) firstVisible = opt;
+  });
+  Array.from(itemSelect.querySelectorAll("optgroup")).forEach((g) => {
+    const anyVisible = Array.from(g.querySelectorAll("option")).some((o) => !o.hidden);
+    g.hidden = !anyVisible;
+  });
+  if (firstVisible && itemSelect.selectedOptions[0] && itemSelect.selectedOptions[0].hidden) {
+    itemSelect.value = firstVisible.value;
+  }
+}
+
+function applyStaticText() {
+  const s = t();
+  document.getElementById("pageTitle").textContent = s.title;
+  document.getElementById("pageSubtitle").textContent = s.subtitle;
+  document.getElementById("whatToMakeLabel").textContent = s.whatToMake;
+  document.getElementById("itemSearch").placeholder = s.searchPlaceholder;
+  document.getElementById("howManyLabel").textContent = s.howMany;
+  document.getElementById("resetStockBtn").textContent = s.resetStock;
+  document.getElementById("legendMissing").textContent = s.legendMissing;
+  document.getElementById("legendOk").textContent = s.legendOk;
+  document.getElementById("legendRaw").textContent = s.legendRaw;
+  document.getElementById("footerText").innerHTML = s.footer;
+  document.documentElement.lang = lang;
+  document.title = `${s.title} — ${s.subtitle}`;
+
+  document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.lang === lang);
+  });
+}
+
+function setLang(newLang) {
+  if (newLang !== "tr" && newLang !== "en") return;
+  lang = newLang;
+  saveLang();
+  applyStaticText();
+  populateSelect(true);
+  document.getElementById("itemSearch").value = "";
+  render();
 }
 
 function init() {
-  populateSelect();
+  applyStaticText();
+  populateSelect(false);
 
   document.getElementById("itemSelect").addEventListener("change", render);
   document.getElementById("targetQty").addEventListener("input", render);
+  document.getElementById("itemSearch").addEventListener("input", (e) => {
+    filterSelectOptions(e.target.value);
+    render();
+  });
+
+  document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setLang(btn.dataset.lang));
+  });
 
   document.getElementById("tree").addEventListener("input", (e) => {
     if (e.target.classList.contains("stock-field")) {
