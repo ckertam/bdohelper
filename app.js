@@ -49,6 +49,8 @@ let stock = loadStock();
 let lang = loadLang();
 let mastery = loadMastery();
 let skill = loadSkill();
+let focusId = null; // tıklanan madde: sadece bununla ilişkili maddeler gösterilir
+let funnelQuery = ""; // ağaç içi arama metni
 
 function loadStock() {
   try {
@@ -142,6 +144,9 @@ const STRINGS = {
     sufficient: "yeterli",
     inStock: "Elimde:",
     usedIn: "Kullanıldığı yer(ler):",
+    funnelSearchPlaceholder: "Ağaçta ara...",
+    focusChip: (name) => `🔎 Odak: ${name} ✕`,
+    noResults: "Eşleşen madde yok.",
     footer: 'Veriler <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a> kaynak alınarak hazırlanmıştır. Oyun içi güncellemelerle miktarlar değişebilir.',
     sections: {
       final: "Ana Ürün",
@@ -174,6 +179,9 @@ const STRINGS = {
     sufficient: "sufficient",
     inStock: "In stock:",
     usedIn: "Used in:",
+    funnelSearchPlaceholder: "Search the tree...",
+    focusChip: (name) => `🔎 Focus: ${name} ✕`,
+    noResults: "No matching items.",
     footer: 'Data sourced from <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a>. Quantities may change with game updates.',
     sections: {
       final: "Final Product",
@@ -291,6 +299,42 @@ function computeAll(rootId, targetQty, masteryPct) {
   return result;
 }
 
+// Tıklanan maddeyle ilişkili TÜM maddeleri bulur: yukarı doğru (bunu kullanan
+// üst maddeler, kök ürüne kadar) ve aşağı doğru (bunun tarifindeki malzemeler,
+// ham maddelere kadar). Odak modunda ağaçta sadece bu küme gösterilir.
+function computeFocusSet(id, results) {
+  const set = new Set([id]);
+
+  const upQueue = [id];
+  while (upQueue.length) {
+    const cur = upQueue.shift();
+    const node = results[cur];
+    if (!node) continue;
+    (node.usedBy || []).forEach((pid) => {
+      if (!set.has(pid)) {
+        set.add(pid);
+        upQueue.push(pid);
+      }
+    });
+  }
+
+  const downQueue = [id];
+  while (downQueue.length) {
+    const cur = downQueue.shift();
+    const item = getItem(cur);
+    if (item.recipe) {
+      item.recipe.ingredients.forEach((ing) => {
+        if (!set.has(ing.item)) {
+          set.add(ing.item);
+          downQueue.push(ing.item);
+        }
+      });
+    }
+  }
+
+  return set;
+}
+
 function sectionOf(node) {
   if (node.isRaw) return "raw";
   return node.tier || "craftable";
@@ -301,7 +345,8 @@ const SECTION_ORDER = ["raw", "craftable", "mid", "final"];
 function renderCard(node, allResults) {
   const s = t();
   const wrap = document.createElement("div");
-  wrap.className = "node";
+  wrap.className = "node" + (focusId === node.id ? " focused" : "");
+  wrap.dataset.item = node.id;
 
   const row = document.createElement("div");
   row.className = "node-row";
@@ -413,11 +458,42 @@ function render() {
   });
 
   const s = t();
-  const activeSections = SECTION_ORDER.filter((sec) => bySection[sec] && bySection[sec].length > 0);
-  main.classList.toggle("has-results", activeSections.length > 0);
+
+  // Odak (tıklanan madde) artık bu ağaçta yoksa (hedef/meslek değişti) temizle.
+  if (focusId && !results[focusId]) focusId = null;
+  const focusSet = focusId ? computeFocusSet(focusId, results) : null;
+
+  updateFocusChip();
+
+  const query = funnelQuery.trim().toLocaleLowerCase(lang);
+  function matchesQuery(node) {
+    if (!query) return true;
+    const { primary, secondary } = nameFor(node);
+    return primary.toLocaleLowerCase(lang).includes(query) ||
+      (secondary && secondary.toLocaleLowerCase(lang).includes(query));
+  }
+
+  const filteredSections = {};
+  SECTION_ORDER.forEach((sec) => {
+    const items = (bySection[sec] || []).filter((node) =>
+      (!focusSet || focusSet.has(node.id)) && matchesQuery(node)
+    );
+    if (items.length > 0) filteredSections[sec] = items;
+  });
+
+  const activeSections = SECTION_ORDER.filter((sec) => filteredSections[sec]);
+  main.classList.toggle("has-results", Object.values(bySection).some((arr) => arr.length > 0));
+
+  if (activeSections.length === 0) {
+    const noResults = document.createElement("div");
+    noResults.className = "no-results";
+    noResults.textContent = s.noResults;
+    tree.appendChild(noResults);
+    return;
+  }
 
   activeSections.forEach((sec, idx) => {
-    const items = bySection[sec];
+    const items = filteredSections[sec];
 
     const section = document.createElement("section");
     section.className = "tier-section";
@@ -511,6 +587,7 @@ function applyStaticText() {
   document.getElementById("skillLabel").textContent = s.skillLabel;
   document.getElementById("whatToMakeLabel").textContent = s.whatToMake;
   document.getElementById("itemSearch").placeholder = s.searchPlaceholder;
+  document.getElementById("funnelSearch").placeholder = s.funnelSearchPlaceholder;
   document.getElementById("howManyLabel").textContent = s.howMany;
   document.getElementById("masteryLabel").textContent = s.masteryLabel;
   document.getElementById("masteryGroup").style.display = skill === "alchemy" ? "" : "none";
@@ -530,6 +607,18 @@ function applyStaticText() {
     btn.textContent = s.skillNames[btn.dataset.skill] || btn.dataset.skill;
     btn.classList.toggle("active", btn.dataset.skill === skill);
   });
+}
+
+function updateFocusChip() {
+  const chip = document.getElementById("focusChip");
+  if (!focusId) {
+    chip.hidden = true;
+    chip.textContent = "";
+    return;
+  }
+  const s = t();
+  chip.hidden = false;
+  chip.textContent = s.focusChip(nameFor(getItem(focusId)).primary);
 }
 
 function updateMasteryHint() {
@@ -555,6 +644,9 @@ function setSkill(newSkill) {
   applyStaticText();
   populateSelect(false);
   document.getElementById("itemSearch").value = "";
+  focusId = null;
+  funnelQuery = "";
+  document.getElementById("funnelSearch").value = "";
   render();
 }
 
@@ -563,10 +655,31 @@ function init() {
   applyStaticText();
   populateSelect(false);
 
-  document.getElementById("itemSelect").addEventListener("change", render);
+  document.getElementById("itemSelect").addEventListener("change", () => {
+    focusId = null;
+    funnelQuery = "";
+    document.getElementById("funnelSearch").value = "";
+    render();
+  });
   document.getElementById("targetQty").addEventListener("input", render);
   document.getElementById("itemSearch").addEventListener("input", (e) => {
     filterSelectOptions(e.target.value);
+    render();
+  });
+  document.getElementById("funnelSearch").addEventListener("input", (e) => {
+    funnelQuery = e.target.value;
+    render();
+  });
+  document.getElementById("focusChip").addEventListener("click", () => {
+    focusId = null;
+    render();
+  });
+  document.getElementById("tree").addEventListener("click", (e) => {
+    if (e.target.closest(".stock-input")) return;
+    const card = e.target.closest(".node");
+    if (!card) return;
+    const id = card.dataset.item;
+    focusId = focusId === id ? null : id;
     render();
   });
   document.getElementById("masteryInput").addEventListener("input", (e) => {
@@ -596,7 +709,7 @@ function init() {
 
       // Tüm liste yeniden çizildiği için düzenlenmekte olan input'un
       // focus/cursor/scroll konumunu geri yüklüyoruz.
-      const restored = document.querySelector(`[data-item="${CSS.escape(id)}"]`);
+      const restored = document.querySelector(`input.stock-field[data-item="${CSS.escape(id)}"]`);
       if (restored) {
         restored.focus();
         try { restored.setSelectionRange(selStart, selStart); } catch (err) { /* no-op */ }
