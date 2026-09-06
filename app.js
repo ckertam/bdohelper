@@ -12,6 +12,7 @@
 const STORAGE_KEY = "bdohelper_stock_v1";
 const LANG_KEY = "bdohelper_lang_v1";
 const MASTERY_KEY = "bdohelper_mastery_v1";
+const SKILL_KEY = "bdohelper_skill_v1";
 
 // bdocodex.com/us/alchemymastery/ — Simya Mastery seviyesine göre "Ürün Miktarı Artışı" (%).
 // [mastery, productAmountIncreasePercent], mastery'ye göre artan sırada, 50 puanlık aralıklarla.
@@ -47,6 +48,7 @@ function getMasteryBonusPercent(mastery) {
 let stock = loadStock();
 let lang = loadLang();
 let mastery = loadMastery();
+let skill = loadSkill();
 
 function loadStock() {
   try {
@@ -99,10 +101,30 @@ function saveMastery() {
   }
 }
 
+function loadSkill() {
+  try {
+    const raw = localStorage.getItem(SKILL_KEY);
+    return raw === "cooking" ? "cooking" : "alchemy";
+  } catch (e) {
+    return "alchemy";
+  }
+}
+
+function saveSkill() {
+  try {
+    localStorage.setItem(SKILL_KEY, skill);
+  } catch (e) {
+    /* no-op */
+  }
+}
+
 const STRINGS = {
   tr: {
     title: "BDO Helper",
     subtitle: "Simya (Alchemy) ham madde hesaplayıcısı",
+    subtitleFor: (sk) => (sk === "cooking" ? "Aşçılık ham madde hesaplayıcısı" : "Simya (Alchemy) ham madde hesaplayıcısı"),
+    skillLabel: "Meslek",
+    skillNames: { alchemy: "Simya", cooking: "Aşçılık" },
     whatToMake: "Ne üretmek istiyorsun?",
     searchPlaceholder: "Ürün ara...",
     howMany: "Kaç adet üretmek istiyorsun?",
@@ -126,11 +148,15 @@ const STRINGS = {
       mid: "Ara İksirler",
       craftable: "Simya Ürünleri (İksir / Reaktif / Kristal vb.)",
       raw: "Ham Maddeler / Satın Alınanlar"
-    }
+    },
+    craftableLabelFor: (sk) => (sk === "cooking" ? "Aşçılık Ürünleri (Yemek / Tatlı vb.)" : "Simya Ürünleri (İksir / Reaktif / Kristal vb.)")
   },
   en: {
     title: "BDO Helper",
     subtitle: "Alchemy raw-material calculator",
+    subtitleFor: (sk) => (sk === "cooking" ? "Cooking raw-material calculator" : "Alchemy raw-material calculator"),
+    skillLabel: "Profession",
+    skillNames: { alchemy: "Alchemy", cooking: "Cooking" },
     whatToMake: "What do you want to craft?",
     searchPlaceholder: "Search item...",
     howMany: "How many do you want to craft?",
@@ -154,7 +180,8 @@ const STRINGS = {
       mid: "Intermediate Draughts",
       craftable: "Alchemy Products (Elixirs / Reagents / Crystals etc.)",
       raw: "Raw Materials / Purchased Items"
-    }
+    },
+    craftableLabelFor: (sk) => (sk === "cooking" ? "Cooking Products (Dishes / Desserts etc.)" : "Alchemy Products (Elixirs / Reagents / Crystals etc.)")
   }
 };
 
@@ -303,7 +330,7 @@ function renderCard(node, allResults) {
   } else if (node.batches) {
     const badge = document.createElement("span");
     badge.className = "badge";
-    badge.textContent = mastery > 0
+    badge.textContent = skill === "alchemy" && mastery > 0
       ? s.batchesBadgeMastery(node.batches, node.producedQty)
       : s.batchesBadge(node.batches, node.producedQty);
     row.appendChild(badge);
@@ -375,7 +402,8 @@ function render() {
     return;
   }
 
-  const results = computeAll(selectedId, targetQty, getMasteryBonusPercent(mastery));
+  const masteryPct = skill === "alchemy" ? getMasteryBonusPercent(mastery) : 0;
+  const results = computeAll(selectedId, targetQty, masteryPct);
 
   const bySection = {};
   Object.values(results).forEach((node) => {
@@ -395,7 +423,7 @@ function render() {
     section.className = "tier-section";
 
     const heading = document.createElement("h2");
-    heading.textContent = s.sections[sec] || sec;
+    heading.textContent = sec === "craftable" ? s.craftableLabelFor(skill) : (s.sections[sec] || sec);
     section.appendChild(heading);
 
     const cardsWrap = document.createElement("div");
@@ -428,6 +456,7 @@ function populateSelect(preserveSelection) {
   const byTier = { final: [], mid: [], craftable: [] };
   Object.entries(RECIPES.items).forEach(([id, item]) => {
     if (!item.recipe) return; // sadece üretilebilen maddeler seçilebilir
+    if ((item.skill || "alchemy") !== skill) return; // sadece seçili meslekteki hedefler
     const tier = item.tier || "craftable";
     if (!byTier[tier]) byTier[tier] = [];
     byTier[tier].push({ id, item });
@@ -438,7 +467,7 @@ function populateSelect(preserveSelection) {
     const group = byTier[tier];
     if (!group || group.length === 0) return;
     const optgroup = document.createElement("optgroup");
-    optgroup.label = s.sections[tier] || tier;
+    optgroup.label = tier === "craftable" ? s.craftableLabelFor(skill) : (s.sections[tier] || tier);
     group
       .sort((a, b) => nameFor(a.item).primary.localeCompare(nameFor(b.item).primary, lang))
       .forEach(({ id, item }) => {
@@ -476,12 +505,15 @@ function filterSelectOptions(query) {
 
 function applyStaticText() {
   const s = t();
+  const subtitle = s.subtitleFor(skill);
   document.getElementById("pageTitle").textContent = s.title;
-  document.getElementById("pageSubtitle").textContent = s.subtitle;
+  document.getElementById("pageSubtitle").textContent = subtitle;
+  document.getElementById("skillLabel").textContent = s.skillLabel;
   document.getElementById("whatToMakeLabel").textContent = s.whatToMake;
   document.getElementById("itemSearch").placeholder = s.searchPlaceholder;
   document.getElementById("howManyLabel").textContent = s.howMany;
   document.getElementById("masteryLabel").textContent = s.masteryLabel;
+  document.getElementById("masteryGroup").style.display = skill === "alchemy" ? "" : "none";
   updateMasteryHint();
   document.getElementById("resetStockBtn").textContent = s.resetStock;
   document.getElementById("legendMissing").textContent = s.legendMissing;
@@ -489,10 +521,14 @@ function applyStaticText() {
   document.getElementById("legendRaw").textContent = s.legendRaw;
   document.getElementById("footerText").innerHTML = s.footer;
   document.documentElement.lang = lang;
-  document.title = `${s.title} — ${s.subtitle}`;
+  document.title = `${s.title} — ${subtitle}`;
 
   document.querySelectorAll(".lang-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.lang === lang);
+  });
+  document.querySelectorAll(".skill-btn").forEach((btn) => {
+    btn.textContent = s.skillNames[btn.dataset.skill] || btn.dataset.skill;
+    btn.classList.toggle("active", btn.dataset.skill === skill);
   });
 }
 
@@ -508,6 +544,16 @@ function setLang(newLang) {
   saveLang();
   applyStaticText();
   populateSelect(true);
+  document.getElementById("itemSearch").value = "";
+  render();
+}
+
+function setSkill(newSkill) {
+  if (newSkill !== "alchemy" && newSkill !== "cooking") return;
+  skill = newSkill;
+  saveSkill();
+  applyStaticText();
+  populateSelect(false);
   document.getElementById("itemSearch").value = "";
   render();
 }
@@ -532,6 +578,10 @@ function init() {
 
   document.querySelectorAll(".lang-btn").forEach((btn) => {
     btn.addEventListener("click", () => setLang(btn.dataset.lang));
+  });
+
+  document.querySelectorAll(".skill-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setSkill(btn.dataset.skill));
   });
 
   document.getElementById("tree").addEventListener("input", (e) => {

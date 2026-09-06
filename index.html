@@ -18,6 +18,13 @@
 
 <main>
   <section class="controls" aria-label="Hesaplama ayarları">
+    <div class="control-group">
+      <label id="skillLabel">Meslek</label>
+      <div class="skill-toggle" role="group" aria-label="Skill / Meslek">
+        <button type="button" class="skill-btn" data-skill="alchemy">Simya</button>
+        <button type="button" class="skill-btn" data-skill="cooking">Aşçılık</button>
+      </div>
+    </div>
     <div class="control-group control-group-wide">
       <label for="itemSelect" id="whatToMakeLabel">Ne üretmek istiyorsun?</label>
       <input type="text" id="itemSearch" placeholder="Ürün ara...">
@@ -27,7 +34,7 @@
       <label for="targetQty" id="howManyLabel">Kaç adet üretmek istiyorsun?</label>
       <input type="number" id="targetQty" min="1" step="1" value="10">
     </div>
-    <div class="control-group">
+    <div class="control-group" id="masteryGroup">
       <label for="masteryInput" id="masteryLabel">Simya Mastery</label>
       <input type="number" id="masteryInput" min="0" max="3000" step="1" value="0">
       <span class="mastery-hint" id="masteryHint"></span>
