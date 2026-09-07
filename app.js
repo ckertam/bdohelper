@@ -166,6 +166,7 @@ const STRINGS = {
     missing: (n) => `${n} eksik`,
     sufficient: "yeterli",
     inStock: "Elimde:",
+    simpleAlchemyNote: "Basit Kimya ile yapılır: Simya Mastery bu ürünün miktarını artırmaz.",
     inStockHigher: "Üst kalite (Adv/Endless) elimde:",
     higherGradeHint: (ratio) => `1 üst kalite = ${ratio} adet`,
     usedIn: "Kullanıldığı yer(ler):",
@@ -204,6 +205,7 @@ const STRINGS = {
     missing: (n) => `${n} missing`,
     sufficient: "sufficient",
     inStock: "In stock:",
+    simpleAlchemyNote: "Made via Simple Alchemy: Alchemy Mastery does not increase this item's yield.",
     inStockHigher: "Higher-grade (Adv/Endless) owned:",
     higherGradeHint: (ratio) => `1 higher-grade = ${ratio} units`,
     usedIn: "Used in:",
@@ -230,6 +232,16 @@ function nameFor(item) {
   const primary = lang === "tr" ? item.name_tr : item.name_en;
   const secondary = lang === "tr" ? item.name_en : item.name_tr;
   return { primary: primary || secondary || "?", secondary: secondary || "" };
+}
+
+// Simya reçetelerinin bir kısmı "Basit Kimya" ile (Alet gerekmeden, L tuşu
+// İşleme menüsünden) yapılır ve RNG'li (1-4 vb.) miktar üretir; bu üretimler
+// Simya Mastery'den ETKİLENMEZ. Gerçek Kimya Aleti ile yapılan (sabit çıktı,
+// RNG notu olmayan) reçetelerde Mastery ürün miktarını artırır. Veride bu
+// ayrım, o maddenin notundaki "RNG üretim/yield" ifadesiyle işaretleniyor.
+function isSimpleAlchemyRecipe(item) {
+  const note = (item.note_tr || "") + " " + (item.note_en || "");
+  return /RNG (üretim|yield)/i.test(note);
 }
 
 function getItem(id) {
@@ -291,9 +303,12 @@ function computeAll(rootId, targetQty, masteryPct) {
     const have = baseHave + higherHave * HIGHER_GRADE_RATIO;
     const required = demand[id];
     const missing = Math.max(0, required - have);
+    const masteryApplies = !!item.recipe && !isSimpleAlchemyRecipe(item);
     let batches = 0;
     let producedQty = 0;
-    let effectiveOutputQty = item.recipe ? item.recipe.output_qty * yieldMultiplier : null;
+    let effectiveOutputQty = item.recipe
+      ? item.recipe.output_qty * (masteryApplies ? yieldMultiplier : 1)
+      : null;
 
     if (item.recipe && missing > 0) {
       batches = Math.ceil(missing / effectiveOutputQty);
@@ -311,6 +326,7 @@ function computeAll(rootId, targetQty, masteryPct) {
       source_tr: item.source_tr || null,
       source_en: item.source_en || null,
       isElixir,
+      masteryApplies,
       required,
       have,
       baseHave,
@@ -410,7 +426,7 @@ function renderCard(node, allResults) {
   } else if (node.batches) {
     const badge = document.createElement("span");
     badge.className = "badge";
-    badge.textContent = skill === "alchemy" && mastery > 0
+    badge.textContent = skill === "alchemy" && mastery > 0 && node.masteryApplies
       ? s.batchesBadgeMastery(node.batches, node.producedQty)
       : s.batchesBadge(node.batches, node.producedQty);
     row.appendChild(badge);
@@ -483,6 +499,13 @@ function renderCard(node, allResults) {
     noteDiv.className = "note-text";
     noteDiv.textContent = `ℹ ${note}`;
     wrap.appendChild(noteDiv);
+  }
+
+  if (!node.isRaw && !node.masteryApplies && skill === "alchemy" && mastery > 0) {
+    const masteryNote = document.createElement("div");
+    masteryNote.className = "note-text";
+    masteryNote.textContent = `⚠ ${s.simpleAlchemyNote}`;
+    wrap.appendChild(masteryNote);
   }
 
   return wrap;
