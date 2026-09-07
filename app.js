@@ -311,7 +311,13 @@ function computeAll(rootId, targetQty, masteryPct) {
       : null;
 
     if (item.recipe && missing > 0) {
-      batches = Math.ceil(missing / effectiveOutputQty);
+      // Mastery, bir üretimden çıkan ORTALAMA miktarı artırır ama tarifin
+      // malzeme oranını değiştirmez — yani "kaç kez üretim yapman gerektiği"
+      // (batches), dolayısıyla malzeme ihtiyacı, HER ZAMAN temel (Mastery'siz)
+      // çıktıya göre hesaplanır. Mastery'nin etkisi sadece o üretimlerden
+      // muhtemelen ne kadar FAZLADAN ürün alacağını (producedQty) gösterir —
+      // bu fazlalığa güvenip alt malzeme ihtiyacını azaltmıyoruz.
+      batches = Math.ceil(missing / item.recipe.output_qty);
       producedQty = Math.round(batches * effectiveOutputQty);
     }
 
