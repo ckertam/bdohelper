@@ -169,6 +169,14 @@ const STRINGS = {
     simpleAlchemyNote: "Basit Kimya ile yapılır: Simya Mastery bu ürünün miktarını artırmaz.",
     inStockHigher: "Üst kalite (Adv/Endless) elimde:",
     higherGradeHint: (ratio) => `1 üst kalite = ${ratio} adet`,
+    methodSimple: (sk) => (sk === "cooking" ? "Basit Yemek" : "Basit Kimya"),
+    methodTool: (sk) => (sk === "cooking" ? "Aşçılık Aleti" : "Kimya Aleti"),
+    ingredientsLabel: "Malzemeler:",
+    ingredientLine: (name, needed, missing) => (
+      missing > 0
+        ? `${name}: bu ürün için ${needed} gerekli · toplamda ${missing} eksik`
+        : `${name}: bu ürün için ${needed} gerekli · toplamda yeterli`
+    ),
     usedIn: "Kullanıldığı yer(ler):",
     funnelSearchPlaceholder: "Ağaçta ara...",
     focusChip: (name) => `🔎 Odak: ${name} ✕`,
@@ -208,6 +216,14 @@ const STRINGS = {
     simpleAlchemyNote: "Made via Simple Alchemy: Alchemy Mastery does not increase this item's yield.",
     inStockHigher: "Higher-grade (Adv/Endless) owned:",
     higherGradeHint: (ratio) => `1 higher-grade = ${ratio} units`,
+    methodSimple: (sk) => (sk === "cooking" ? "Simple Cooking" : "Simple Alchemy"),
+    methodTool: (sk) => (sk === "cooking" ? "Cooking Utensil" : "Alchemy Tool"),
+    ingredientsLabel: "Ingredients:",
+    ingredientLine: (name, needed, missing) => (
+      missing > 0
+        ? `${name}: ${needed} needed for this · ${missing} missing overall`
+        : `${name}: ${needed} needed for this · sufficient overall`
+    ),
     usedIn: "Used in:",
     funnelSearchPlaceholder: "Search the tree...",
     focusChip: (name) => `🔎 Focus: ${name} ✕`,
@@ -429,13 +445,20 @@ function renderCard(node, allResults) {
     badge.className = "badge raw";
     badge.textContent = s.rawBadge;
     row.appendChild(badge);
-  } else if (node.batches) {
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = skill === "alchemy" && mastery > 0 && node.masteryApplies
-      ? s.batchesBadgeMastery(node.batches, node.producedQty)
-      : s.batchesBadge(node.batches, node.producedQty);
-    row.appendChild(badge);
+  } else {
+    const methodBadge = document.createElement("span");
+    methodBadge.className = "badge method " + (node.masteryApplies ? "method-tool" : "method-simple");
+    methodBadge.textContent = node.masteryApplies ? s.methodTool(skill) : s.methodSimple(skill);
+    row.appendChild(methodBadge);
+
+    if (node.batches) {
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = skill === "alchemy" && mastery > 0 && node.masteryApplies
+        ? s.batchesBadgeMastery(node.batches, node.producedQty)
+        : s.batchesBadge(node.batches, node.producedQty);
+      row.appendChild(badge);
+    }
   }
 
   const qtyInfo = document.createElement("div");
@@ -481,6 +504,28 @@ function renderCard(node, allResults) {
   }
 
   wrap.appendChild(row);
+
+  if (item.recipe && item.recipe.ingredients.length > 0 && node.batches > 0) {
+    const ingredientsWrap = document.createElement("div");
+    ingredientsWrap.className = "ingredients-list";
+    const ingredientsLabel = document.createElement("div");
+    ingredientsLabel.className = "note-text ingredients-label";
+    ingredientsLabel.textContent = `🧪 ${s.ingredientsLabel}`;
+    ingredientsWrap.appendChild(ingredientsLabel);
+
+    item.recipe.ingredients.forEach((ing) => {
+      const ingResult = allResults[ing.item];
+      const ingName = ingResult ? nameFor(ingResult).primary : nameFor(getItem(ing.item)).primary;
+      const neededHere = node.batches * ing.qty;
+      const ingMissing = ingResult ? ingResult.missing : 0;
+      const line = document.createElement("div");
+      line.className = "ingredient-line" + (ingMissing > 0 ? " missing" : " satisfied");
+      line.textContent = s.ingredientLine(ingName, neededHere, ingMissing);
+      ingredientsWrap.appendChild(line);
+    });
+
+    wrap.appendChild(ingredientsWrap);
+  }
 
   if (node.usedBy && node.usedBy.length > 0) {
     const usedByNames = node.usedBy

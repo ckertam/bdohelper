@@ -382,6 +382,8 @@ select:focus, input:focus {
   color: var(--text-dim);
 }
 .badge.raw { border-color: var(--raw); color: var(--raw); }
+.badge.method-simple { border-color: var(--text-dim); }
+.badge.method-tool { border-color: var(--accent-dim); color: var(--accent); }
 
 .qty-info {
   display: flex;
@@ -426,6 +428,27 @@ select:focus, input:focus {
   color: var(--text-dim);
   margin-top: 4px;
 }
+
+.ingredients-list {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.ingredients-label {
+  margin-top: 0;
+  margin-bottom: 2px;
+}
+
+.ingredient-line {
+  font-size: 0.8rem;
+  padding: 1px 0;
+}
+
+.ingredient-line.missing { color: var(--need); }
+.ingredient-line.satisfied { color: var(--ok); }
 
 footer {
   text-align: center;
