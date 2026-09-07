@@ -242,7 +242,7 @@ const RECIPES = {
   "item_664": {
     "name_en": "Elixir of Amity",
     "name_tr": "Dostluk İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -272,7 +272,7 @@ const RECIPES = {
   "item_668": {
     "name_en": "Resurrection Elixir",
     "name_tr": "Dirilme İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -302,7 +302,7 @@ const RECIPES = {
   "item_670": {
     "name_en": "Elixir of Human Hunt",
     "name_tr": "İnsan Avı İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -332,7 +332,7 @@ const RECIPES = {
   "item_672": {
     "name_en": "Elixir of Frenzy",
     "name_tr": "Çılgınlık İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -366,7 +366,7 @@ const RECIPES = {
   "item_674": {
     "name_en": "Golden Hand Elixir",
     "name_tr": "Altın El İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -400,7 +400,7 @@ const RECIPES = {
   "item_676": {
     "name_en": "Elixir of Draining",
     "name_tr": "Yağma İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -434,7 +434,7 @@ const RECIPES = {
   "item_678": {
     "name_en": "Elixir of Demihuman Hunt",
     "name_tr": "Yarı İnsan Avı İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -464,7 +464,7 @@ const RECIPES = {
   "item_680": {
     "name_en": "Elixir of Perforation",
     "name_tr": "Delme İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -498,7 +498,7 @@ const RECIPES = {
   "item_682": {
     "name_en": "Elixir of Energy",
     "name_tr": "Enerji İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -528,7 +528,7 @@ const RECIPES = {
   "item_684": {
     "name_en": "Elixir of Wings",
     "name_tr": "Kanat İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -558,7 +558,7 @@ const RECIPES = {
   "item_686": {
     "name_en": "Elixir of Death",
     "name_tr": "Ölüm İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -592,7 +592,7 @@ const RECIPES = {
   "item_688": {
     "name_en": "Elixir of Wind",
     "name_tr": "Rüzgar İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -622,7 +622,7 @@ const RECIPES = {
   "item_690": {
     "name_en": "Elixir of Swiftness",
     "name_tr": "Çabukluk İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -652,7 +652,7 @@ const RECIPES = {
   "item_692": {
     "name_en": "Elixir of Spells",
     "name_tr": "Sihir İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -682,7 +682,7 @@ const RECIPES = {
   "item_694": {
     "name_en": "Elixir of Seal",
     "name_tr": "Fok İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -712,7 +712,7 @@ const RECIPES = {
   "item_696": {
     "name_en": "Elixir of Assassination",
     "name_tr": "Suikastçı İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -746,7 +746,7 @@ const RECIPES = {
   "item_698": {
     "name_en": "Elixir of Detection",
     "name_tr": "Tespit İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -780,7 +780,7 @@ const RECIPES = {
   "item_700": {
     "name_en": "Elixir of Concentration",
     "name_tr": "Konsantrasyon İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -810,7 +810,7 @@ const RECIPES = {
   "item_702": {
     "name_en": "Elixir of Will",
     "name_tr": "İrade İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -840,7 +840,7 @@ const RECIPES = {
   "item_704": {
     "name_en": "Elixir of Fury",
     "name_tr": "Öfke İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -870,7 +870,7 @@ const RECIPES = {
   "item_706": {
     "name_en": "Elixir of Resistance",
     "name_tr": "Karşı Koyma İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -900,7 +900,7 @@ const RECIPES = {
   "item_708": {
     "name_en": "Elixir of Life",
     "name_tr": "Yaşam İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -930,7 +930,7 @@ const RECIPES = {
   "item_710": {
     "name_en": "Elixir of Mentality",
     "name_tr": "Mentalite İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -960,7 +960,7 @@ const RECIPES = {
   "item_712": {
     "name_en": "Grim Reaper's Elixir",
     "name_tr": "Ölüm Meleği İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -994,7 +994,7 @@ const RECIPES = {
   "item_714": {
     "name_en": "EXP Elixir",
     "name_tr": "Deneyim İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -1024,7 +1024,7 @@ const RECIPES = {
   "item_716": {
     "name_en": "Defense Elixir",
     "name_tr": "Savunma İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -1054,7 +1054,7 @@ const RECIPES = {
   "item_718": {
     "name_en": "Elixir of Carnage",
     "name_tr": "Katliam İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -1088,7 +1088,7 @@ const RECIPES = {
   "item_720": {
     "name_en": "Elixir of Sky",
     "name_tr": "Gök İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -1122,7 +1122,7 @@ const RECIPES = {
   "item_722": {
     "name_en": "Elixir of Endurance",
     "name_tr": "Dayanım İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -1152,7 +1152,7 @@ const RECIPES = {
   "item_724": {
     "name_en": "Worker's Elixir",
     "name_tr": "İşçi İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -1182,7 +1182,7 @@ const RECIPES = {
   "item_726": {
     "name_en": "Fisher's Elixir",
     "name_tr": "Balıkçı İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -1212,7 +1212,7 @@ const RECIPES = {
   "item_728": {
     "name_en": "Elixir of Burn Removal",
     "name_tr": "Yanık Kaldırma İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -1242,7 +1242,7 @@ const RECIPES = {
   "item_729": {
     "name_en": "Antidote Elixir",
     "name_tr": "Panzehir İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -1272,7 +1272,7 @@ const RECIPES = {
   "item_730": {
     "name_en": "Elixir of Hemostasis",
     "name_tr": "Pıhtılaştırma İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -3420,7 +3420,7 @@ const RECIPES = {
   "item_732": {
     "name_en": "Whale Tendon Elixir",
     "name_tr": "Balina Tendonu İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -3584,7 +3584,7 @@ const RECIPES = {
   "item_753": {
     "name_en": "Elixir of Training",
     "name_tr": "Eğitim İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -3614,7 +3614,7 @@ const RECIPES = {
   "item_749": {
     "name_en": "Elixir of Time",
     "name_tr": "Zaman İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -3644,7 +3644,7 @@ const RECIPES = {
   "item_762": {
     "name_en": "Elixir of Shock",
     "name_tr": "Şok İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -3800,7 +3800,7 @@ const RECIPES = {
   "item_740": {
     "name_en": "Griffon's Elixir",
     "name_tr": "Grifon İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -3834,7 +3834,7 @@ const RECIPES = {
   "item_777": {
     "name_en": "Looney Elixir",
     "name_tr": "Looney İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -3868,7 +3868,7 @@ const RECIPES = {
   "item_773": {
     "name_en": "Weenie Elixir",
     "name_tr": "Weenie İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -3934,7 +3934,7 @@ const RECIPES = {
   "item_42413": {
     "name_en": "Elixir of Fond Memories",
     "name_tr": "Güzel Hatıralar İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -4022,7 +4022,7 @@ const RECIPES = {
   "item_782": {
     "name_en": "Helix Elixir",
     "name_tr": "Helix İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -4120,7 +4120,7 @@ const RECIPES = {
   "item_1152": {
     "name_en": "Elixir of Skill",
     "name_tr": "Beceri İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -4154,7 +4154,7 @@ const RECIPES = {
   "item_1155": {
     "name_en": "Elixir of Mastery",
     "name_tr": "Becerikli İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -4188,7 +4188,7 @@ const RECIPES = {
   "item_1156": {
     "name_en": "Elixir of Labor",
     "name_tr": "İş İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -4218,7 +4218,7 @@ const RECIPES = {
   "item_1157": {
     "name_en": "Elixir of Armor",
     "name_tr": "Zırh İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -4396,7 +4396,7 @@ const RECIPES = {
   "item_1180": {
     "name_en": "Elixir of Destruction",
     "name_tr": "Yıkım İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -4430,7 +4430,7 @@ const RECIPES = {
   "item_1184": {
     "name_en": "Elixir of Persistence",
     "name_tr": "Azim İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -4464,7 +4464,7 @@ const RECIPES = {
   "item_1188": {
     "name_en": "Elixir of Brawn",
     "name_tr": "Kuvvet İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [
@@ -4782,7 +4782,7 @@ const RECIPES = {
   "item_699": {
     "name_en": "Elixir of Sharp Detection",
     "name_tr": "Keskin Tespit İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 25,
       "ingredients": [
@@ -4876,7 +4876,7 @@ const RECIPES = {
   "item_1409": {
     "name_en": "Elixir of Edania",
     "name_tr": "Edania İksiri",
-    "tier": "craftable",
+    "tier": "elixir",
     "recipe": {
       "output_qty": 1,
       "ingredients": [

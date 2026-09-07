@@ -417,6 +417,10 @@ select:focus, input:focus {
   padding: 5px 8px;
 }
 
+.stock-input-higher label {
+  color: var(--accent);
+}
+
 .note-text {
   font-size: 0.78rem;
   color: var(--text-dim);

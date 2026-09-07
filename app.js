@@ -10,9 +10,14 @@
 // otomatik olarak sıfıra iner (huni/funnel mantığı).
 
 const STORAGE_KEY = "bdohelper_stock_v1";
+const STORAGE_KEY_HIGH = "bdohelper_stock_high_v1";
 const LANG_KEY = "bdohelper_lang_v1";
 const MASTERY_KEY = "bdohelper_mastery_v1";
 const SKILL_KEY = "bdohelper_skill_v1";
+
+// bdocodex: her iksirin üst kaliteli (Advanced/Endless vb.) versiyonu, tarifte
+// istenen normal (Simple/base) iksir yerine 1:3 oranında kullanılabilir.
+const HIGHER_GRADE_RATIO = 3;
 
 // bdocodex.com/us/alchemymastery/ — Simya Mastery seviyesine göre "Ürün Miktarı Artışı" (%).
 // [mastery, productAmountIncreasePercent], mastery'ye göre artan sırada, 50 puanlık aralıklarla.
@@ -46,6 +51,7 @@ function getMasteryBonusPercent(mastery) {
 }
 
 let stock = loadStock();
+let stockHigh = loadStockHigh();
 let lang = loadLang();
 let mastery = loadMastery();
 let skill = loadSkill();
@@ -64,6 +70,23 @@ function loadStock() {
 function saveStock() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stock));
+  } catch (e) {
+    /* localStorage kapalı olabilir, sessizce geç */
+  }
+}
+
+function loadStockHigh() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_HIGH);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveStockHigh() {
+  try {
+    localStorage.setItem(STORAGE_KEY_HIGH, JSON.stringify(stockHigh));
   } catch (e) {
     /* localStorage kapalı olabilir, sessizce geç */
   }
@@ -143,6 +166,8 @@ const STRINGS = {
     missing: (n) => `${n} eksik`,
     sufficient: "yeterli",
     inStock: "Elimde:",
+    inStockHigher: "Üst kalite (Adv/Endless) elimde:",
+    higherGradeHint: (ratio) => `1 üst kalite = ${ratio} adet`,
     usedIn: "Kullanıldığı yer(ler):",
     funnelSearchPlaceholder: "Ağaçta ara...",
     focusChip: (name) => `🔎 Odak: ${name} ✕`,
@@ -151,10 +176,11 @@ const STRINGS = {
     sections: {
       final: "Ana Ürün",
       mid: "Ara İksirler",
-      craftable: "Simya Ürünleri (İksir / Reaktif / Kristal vb.)",
+      elixir: "İksirler",
+      craftable: "Diğer Simya Ürünleri (Reaktif / Kristal vb.)",
       raw: "Ham Maddeler / Satın Alınanlar"
     },
-    craftableLabelFor: (sk) => (sk === "cooking" ? "Aşçılık Ürünleri (Yemek / Tatlı vb.)" : "Simya Ürünleri (İksir / Reaktif / Kristal vb.)")
+    craftableLabelFor: (sk) => (sk === "cooking" ? "Aşçılık Ürünleri (Yemek / Tatlı vb.)" : "Diğer Simya Ürünleri (Reaktif / Kristal vb.)")
   },
   en: {
     title: "BDO Helper",
@@ -178,6 +204,8 @@ const STRINGS = {
     missing: (n) => `${n} missing`,
     sufficient: "sufficient",
     inStock: "In stock:",
+    inStockHigher: "Higher-grade (Adv/Endless) owned:",
+    higherGradeHint: (ratio) => `1 higher-grade = ${ratio} units`,
     usedIn: "Used in:",
     funnelSearchPlaceholder: "Search the tree...",
     focusChip: (name) => `🔎 Focus: ${name} ✕`,
@@ -186,10 +214,11 @@ const STRINGS = {
     sections: {
       final: "Final Product",
       mid: "Intermediate Draughts",
-      craftable: "Alchemy Products (Elixirs / Reagents / Crystals etc.)",
+      elixir: "Elixirs",
+      craftable: "Other Alchemy Products (Reagents / Crystals etc.)",
       raw: "Raw Materials / Purchased Items"
     },
-    craftableLabelFor: (sk) => (sk === "cooking" ? "Cooking Products (Dishes / Desserts etc.)" : "Alchemy Products (Elixirs / Reagents / Crystals etc.)")
+    craftableLabelFor: (sk) => (sk === "cooking" ? "Cooking Products (Dishes / Desserts etc.)" : "Other Alchemy Products (Reagents / Crystals etc.)")
   }
 };
 
@@ -256,7 +285,10 @@ function computeAll(rootId, targetQty, masteryPct) {
     processed.add(id);
 
     const item = getItem(id);
-    const have = stock[id] || 0;
+    const isElixir = item.tier === "elixir";
+    const baseHave = stock[id] || 0;
+    const higherHave = isElixir ? (stockHigh[id] || 0) : 0;
+    const have = baseHave + higherHave * HIGHER_GRADE_RATIO;
     const required = demand[id];
     const missing = Math.max(0, required - have);
     let batches = 0;
@@ -278,8 +310,11 @@ function computeAll(rootId, targetQty, masteryPct) {
       note_en: item.note_en || null,
       source_tr: item.source_tr || null,
       source_en: item.source_en || null,
+      isElixir,
       required,
       have,
+      baseHave,
+      higherHave,
       missing,
       batches,
       producedQty,
@@ -340,7 +375,7 @@ function sectionOf(node) {
   return node.tier || "craftable";
 }
 
-const SECTION_ORDER = ["raw", "craftable", "mid", "final"];
+const SECTION_ORDER = ["raw", "craftable", "elixir", "mid", "final"];
 
 function renderCard(node, allResults) {
   const s = t();
@@ -403,6 +438,25 @@ function renderCard(node, allResults) {
   stockWrap.appendChild(label);
   stockWrap.appendChild(input);
   row.appendChild(stockWrap);
+
+  if (node.isElixir) {
+    const higherWrap = document.createElement("div");
+    higherWrap.className = "stock-input stock-input-higher";
+    const higherLabel = document.createElement("label");
+    higherLabel.textContent = s.inStockHigher;
+    higherLabel.title = s.higherGradeHint(HIGHER_GRADE_RATIO);
+    const higherInput = document.createElement("input");
+    higherInput.type = "number";
+    higherInput.min = "0";
+    higherInput.step = "1";
+    higherInput.dataset.item = node.id;
+    higherInput.value = stockHigh[node.id] || 0;
+    higherInput.className = "stock-field-higher";
+    higherInput.title = s.higherGradeHint(HIGHER_GRADE_RATIO);
+    higherWrap.appendChild(higherLabel);
+    higherWrap.appendChild(higherInput);
+    row.appendChild(higherWrap);
+  }
 
   wrap.appendChild(row);
 
@@ -529,7 +583,7 @@ function populateSelect(preserveSelection) {
   const prevValue = preserveSelection ? itemSelect.value : null;
   itemSelect.innerHTML = "";
 
-  const byTier = { final: [], mid: [], craftable: [] };
+  const byTier = { final: [], mid: [], elixir: [], craftable: [] };
   Object.entries(RECIPES.items).forEach(([id, item]) => {
     if (!item.recipe) return; // sadece üretilebilen maddeler seçilebilir
     if ((item.skill || "alchemy") !== skill) return; // sadece seçili meslekteki hedefler
@@ -539,7 +593,7 @@ function populateSelect(preserveSelection) {
   });
 
   const s = t();
-  ["final", "mid", "craftable"].forEach((tier) => {
+  ["final", "mid", "elixir", "craftable"].forEach((tier) => {
     const group = byTier[tier];
     if (!group || group.length === 0) return;
     const optgroup = document.createElement("optgroup");
@@ -698,18 +752,26 @@ function init() {
   });
 
   document.getElementById("tree").addEventListener("input", (e) => {
-    if (e.target.classList.contains("stock-field")) {
+    const isBase = e.target.classList.contains("stock-field");
+    const isHigher = e.target.classList.contains("stock-field-higher");
+    if (isBase || isHigher) {
       const id = e.target.dataset.item;
+      const cls = isBase ? "stock-field" : "stock-field-higher";
       const selStart = e.target.selectionStart;
       const scrollY = window.scrollY;
       const val = Math.max(0, parseInt(e.target.value, 10) || 0);
-      stock[id] = val;
-      saveStock();
+      if (isBase) {
+        stock[id] = val;
+        saveStock();
+      } else {
+        stockHigh[id] = val;
+        saveStockHigh();
+      }
       render();
 
       // Tüm liste yeniden çizildiği için düzenlenmekte olan input'un
       // focus/cursor/scroll konumunu geri yüklüyoruz.
-      const restored = document.querySelector(`input.stock-field[data-item="${CSS.escape(id)}"]`);
+      const restored = document.querySelector(`input.${cls}[data-item="${CSS.escape(id)}"]`);
       if (restored) {
         restored.focus();
         try { restored.setSelectionRange(selStart, selStart); } catch (err) { /* no-op */ }
@@ -720,7 +782,9 @@ function init() {
 
   document.getElementById("resetStockBtn").addEventListener("click", () => {
     stock = {};
+    stockHigh = {};
     saveStock();
+    saveStockHigh();
     render();
   });
 
