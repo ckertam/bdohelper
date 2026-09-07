@@ -14,6 +14,8 @@ const STORAGE_KEY_HIGH = "bdohelper_stock_high_v1";
 const LANG_KEY = "bdohelper_lang_v1";
 const MASTERY_KEY = "bdohelper_mastery_v1";
 const SKILL_KEY = "bdohelper_skill_v1";
+const SELECTED_ITEM_KEY = "bdohelper_selected_item_v1";
+const TARGET_QTY_KEY = "bdohelper_target_qty_v1";
 
 // bdocodex: her iksirin üst kaliteli (Advanced/Endless vb.) versiyonu, tarifte
 // istenen normal (Simple/base) iksir yerine 1:3 oranında kullanılabilir.
@@ -55,6 +57,7 @@ let stockHigh = loadStockHigh();
 let lang = loadLang();
 let mastery = loadMastery();
 let skill = loadSkill();
+let selectedItems = loadSelectedItems();
 let focusId = null; // tıklanan madde: sadece bununla ilişkili maddeler gösterilir
 let funnelQuery = ""; // ağaç içi arama metni
 
@@ -143,6 +146,41 @@ function saveSkill() {
   }
 }
 
+function loadSelectedItems() {
+  try {
+    const raw = localStorage.getItem(SELECTED_ITEM_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveSelectedItem(sk, itemId) {
+  try {
+    selectedItems[sk] = itemId;
+    localStorage.setItem(SELECTED_ITEM_KEY, JSON.stringify(selectedItems));
+  } catch (e) {
+    /* no-op */
+  }
+}
+
+function loadTargetQty() {
+  try {
+    const raw = parseInt(localStorage.getItem(TARGET_QTY_KEY), 10);
+    return Number.isFinite(raw) && raw > 0 ? raw : 10;
+  } catch (e) {
+    return 10;
+  }
+}
+
+function saveTargetQty(qty) {
+  try {
+    localStorage.setItem(TARGET_QTY_KEY, String(qty));
+  } catch (e) {
+    /* no-op */
+  }
+}
+
 const STRINGS = {
   tr: {
     title: "BDO Helper",
@@ -174,8 +212,8 @@ const STRINGS = {
     ingredientsLabel: "Malzemeler:",
     ingredientLine: (name, needed, missing) => (
       missing > 0
-        ? `${name}: bu ürün için ${needed} gerekli · toplamda ${missing} eksik`
-        : `${name}: bu ürün için ${needed} gerekli · toplamda yeterli`
+        ? `${name}: ${needed} gerekli (${missing} eksik)`
+        : `${name}: ${needed} gerekli (yeterli)`
     ),
     usedIn: "Kullanıldığı yer(ler):",
     funnelSearchPlaceholder: "Ağaçta ara...",
@@ -220,9 +258,7 @@ const STRINGS = {
     methodTool: (sk) => (sk === "cooking" ? "Cooking Utensil" : "Alchemy Tool"),
     ingredientsLabel: "Ingredients:",
     ingredientLine: (name, needed, missing) => (
-      missing > 0
-        ? `${name}: ${needed} needed for this · ${missing} missing overall`
-        : `${name}: ${needed} needed for this · sufficient overall`
+      missing > 0 ? `${name}: ${needed} needed (${missing} missing)` : `${name}: ${needed} needed (sufficient)`
     ),
     usedIn: "Used in:",
     funnelSearchPlaceholder: "Search the tree...",
@@ -517,7 +553,11 @@ function renderCard(node, allResults) {
       const ingResult = allResults[ing.item];
       const ingName = ingResult ? nameFor(ingResult).primary : nameFor(getItem(ing.item)).primary;
       const neededHere = node.batches * ing.qty;
-      const ingMissing = ingResult ? ingResult.missing : 0;
+      // Bu satırdaki eksik, SADECE bu üretimin kendi ihtiyacına göre (bu
+      // malzemenin elimdeki stoğuna kıyasla) hesaplanır — malzemenin ağaçtaki
+      // başka dallardan gelen toplam ihtiyacı değil, "bu üretim için" eksik.
+      const ingHave = ingResult ? ingResult.have : 0;
+      const ingMissing = Math.max(0, neededHere - ingHave);
       const line = document.createElement("div");
       line.className = "ingredient-line" + (ingMissing > 0 ? " missing" : " satisfied");
       line.textContent = s.ingredientLine(ingName, neededHere, ingMissing);
@@ -684,8 +724,9 @@ function populateSelect(preserveSelection) {
     itemSelect.appendChild(optgroup);
   });
 
-  if (prevValue && RECIPES.items[prevValue]) {
-    itemSelect.value = prevValue;
+  const restoreValue = prevValue || selectedItems[skill];
+  if (restoreValue && RECIPES.items[restoreValue] && (RECIPES.items[restoreValue].skill || "alchemy") === skill) {
+    itemSelect.value = restoreValue;
   }
 }
 
@@ -780,16 +821,22 @@ function setSkill(newSkill) {
 
 function init() {
   document.getElementById("masteryInput").value = mastery;
+  document.getElementById("targetQty").value = loadTargetQty();
   applyStaticText();
   populateSelect(false);
 
-  document.getElementById("itemSelect").addEventListener("change", () => {
+  document.getElementById("itemSelect").addEventListener("change", (e) => {
+    saveSelectedItem(skill, e.target.value);
     focusId = null;
     funnelQuery = "";
     document.getElementById("funnelSearch").value = "";
     render();
   });
-  document.getElementById("targetQty").addEventListener("input", render);
+  document.getElementById("targetQty").addEventListener("input", (e) => {
+    const qty = parseInt(e.target.value, 10);
+    if (Number.isFinite(qty) && qty > 0) saveTargetQty(qty);
+    render();
+  });
   document.getElementById("itemSearch").addEventListener("input", (e) => {
     filterSelectOptions(e.target.value);
     render();
