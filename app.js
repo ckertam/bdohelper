@@ -287,13 +287,16 @@ function nameFor(item) {
 }
 
 // Simya reçetelerinin bir kısmı "Basit Kimya" ile (Alet gerekmeden, L tuşu
-// İşleme menüsünden) yapılır ve RNG'li (1-4 vb.) miktar üretir; bu üretimler
-// Simya Mastery'den ETKİLENMEZ. Gerçek Kimya Aleti ile yapılan (sabit çıktı,
-// RNG notu olmayan) reçetelerde Mastery ürün miktarını artırır. Veride bu
-// ayrım, o maddenin notundaki "RNG üretim/yield" ifadesiyle işaretleniyor.
+// İşleme menüsünden, başka iksirleri BİRLEŞTİREREK) yapılır; bu üretimler
+// Simya Mastery'den ETKİLENMEZ. Bunlar bizim veride "mid" (5 Öz İksir: Fury/
+// Adaptation/Potential/Corruption/Berserk Draught) ve "final" (Harmony
+// Draught) kademesindeki maddeler — hepsi başka iksirleri + katalizörü
+// birleştiren tariflerdir (bdocodex/BDO wiki'de doğrulandı: bu 5+1 tarif
+// açıkça "Simple Alchemy" olarak listeleniyor). Tek bir iksir/reaktif/kristal
+// üretmek (bizim "elixir" ve "craftable" kademeleri) ise ham maddelerden
+// gerçek bir Kimya Aleti ile yapılır ve Mastery ürün miktarını artırır.
 function isSimpleAlchemyRecipe(item) {
-  const note = (item.note_tr || "") + " " + (item.note_en || "");
-  return /RNG (üretim|yield)/i.test(note);
+  return item.tier === "mid" || item.tier === "final";
 }
 
 function getItem(id) {
