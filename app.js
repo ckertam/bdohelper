@@ -199,7 +199,6 @@ const STRINGS = {
     legendRaw: "Ham madde (üretilmez, toplanır/satın alınır)",
     rawBadge: "Ham Madde",
     batchesBadge: (n, out) => `${n}x üretim (${out} adet çıkar)`,
-    batchesBadgeMastery: (n, out) => `${n}x üretim (~${out} adet çıkar, Mastery dahil)`,
     totalRequired: "Toplam gerekli",
     missing: (n) => `${n} eksik`,
     sufficient: "yeterli",
@@ -246,7 +245,6 @@ const STRINGS = {
     legendRaw: "Raw material (not crafted — gather/hunt/buy)",
     rawBadge: "Raw Material",
     batchesBadge: (n, out) => `${n}x craft (yields ${out})`,
-    batchesBadgeMastery: (n, out) => `${n}x craft (~${out} yielded, Mastery incl.)`,
     totalRequired: "Total required",
     missing: (n) => `${n} missing`,
     sufficient: "sufficient",
@@ -358,19 +356,17 @@ function computeAll(rootId, targetQty, masteryPct) {
     const masteryApplies = !!item.recipe && !isSimpleAlchemyRecipe(item);
     let batches = 0;
     let producedQty = 0;
-    let effectiveOutputQty = item.recipe
-      ? item.recipe.output_qty * (masteryApplies ? yieldMultiplier : 1)
-      : null;
 
     if (item.recipe && missing > 0) {
-      // Mastery, bir üretimden çıkan ORTALAMA miktarı artırır ama tarifin
-      // malzeme oranını değiştirmez — yani "kaç kez üretim yapman gerektiği"
-      // (batches), dolayısıyla malzeme ihtiyacı, HER ZAMAN temel (Mastery'siz)
-      // çıktıya göre hesaplanır. Mastery'nin etkisi sadece o üretimlerden
-      // muhtemelen ne kadar FAZLADAN ürün alacağını (producedQty) gösterir —
-      // bu fazlalığa güvenip alt malzeme ihtiyacını azaltmıyoruz.
+      // Mastery, bir üretimden çıkan ORTALAMA miktarı artırabilir ama bu bir
+      // GARANTİ değil (RNG/ortalama bir etki) ve tarifin malzeme oranını
+      // değiştirmez. Bu yüzden hem "kaç kez üretim yapman gerektiği" (batches)
+      // hem de gösterilen "çıkar" miktarı HER ZAMAN temel (Mastery'siz,
+      // garanti) çıktıya göre hesaplanır — Mastery'ye güvenip sayıları
+      // şişirmiyoruz. Mastery'nin genel etkisi üstteki "+%X verim" ipucunda
+      // ayrıca gösteriliyor.
       batches = Math.ceil(missing / item.recipe.output_qty);
-      producedQty = Math.round(batches * effectiveOutputQty);
+      producedQty = batches * item.recipe.output_qty;
     }
 
     result[id] = {
@@ -490,9 +486,7 @@ function renderCard(node, allResults) {
     if (node.batches) {
       const badge = document.createElement("span");
       badge.className = "badge";
-      badge.textContent = skill === "alchemy" && mastery > 0 && node.masteryApplies
-        ? s.batchesBadgeMastery(node.batches, node.producedQty)
-        : s.batchesBadge(node.batches, node.producedQty);
+      badge.textContent = s.batchesBadge(node.batches, node.producedQty);
       row.appendChild(badge);
     }
   }
