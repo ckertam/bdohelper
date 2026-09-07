@@ -363,17 +363,17 @@ function computeAll(rootId, targetQty, masteryPct) {
     let producedQty = 0;
 
     if (item.recipe && missing > 0) {
-      // Mastery tarifin malzeme oranını DEĞİŞTİRMEZ, bu yüzden "kaç kez
-      // üretim yapman gerektiği" (batches) — dolayısıyla alt malzeme ihtiyacı
-      // — HER ZAMAN temel (Mastery'siz) çıktıya göre hesaplanır. Ama Mastery
-      // ile üretilen FAZLADAN ürün (yalnızca Kimya Aleti ile yapılan, Basit
-      // Kimya OLMAYAN tariflerde) gerçek bir bonustur — Basit Kimya
-      // tariflerinde Mastery hiç etki etmez. Bu yüzden gösterilen "çıkar"
-      // miktarı sadece masteryApplies=true olan tariflerde Mastery'yi içerir.
-      batches = Math.ceil(missing / item.recipe.output_qty);
+      // Kimya Aleti ile yapılan (Basit Kimya OLMAYAN) tariflerde Mastery'nin
+      // "Ürün Miktarı Artışı" gerçek bir ORTALAMA verim artışıdır — bu yüzden
+      // kaç kez üretim yapman gerektiği (batches), dolayısıyla alt malzeme
+      // ihtiyacı, bu ortalamaya göre hesaplanır (ör. 2500 Mastery'de her
+      // üretim ortalama %56 daha fazla verince, daha az üretime/hammaddeye
+      // ihtiyaç olur). Basit Kimya tariflerinde Mastery hiç etki etmediği
+      // için orada her zaman temel çıktı kullanılır.
       const effectiveOutputQty = masteryApplies
         ? item.recipe.output_qty * yieldMultiplier
         : item.recipe.output_qty;
+      batches = Math.ceil(missing / effectiveOutputQty);
       producedQty = Math.round(batches * effectiveOutputQty);
     }
 
