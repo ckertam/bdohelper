@@ -407,6 +407,10 @@ function computeAll(rootId, targetQty, masteryPct) {
 // Tıklanan maddeyle ilişkili TÜM maddeleri bulur: yukarı doğru (bunu kullanan
 // üst maddeler, kök ürüne kadar) ve aşağı doğru (bunun tarifindeki malzemeler,
 // ham maddelere kadar). Odak modunda ağaçta sadece bu küme gösterilir.
+// "down" kümesi (odaklanan madde + onun altındaki tüm malzemeler) ayrıca
+// döndürülür: bu maddeler için render() tüm ağacın toplam ihtiyacı yerine
+// SADECE odaklanan maddenin kendi ihtiyacına göre yeniden hesaplanmış
+// (aynı hammaddeyi paylaşan diğer dallardan etkilenmeyen) rakamlar gösterir.
 function computeFocusSet(id, results) {
   const set = new Set([id]);
 
@@ -423,21 +427,23 @@ function computeFocusSet(id, results) {
     });
   }
 
+  const down = new Set([id]);
   const downQueue = [id];
   while (downQueue.length) {
     const cur = downQueue.shift();
     const item = getItem(cur);
     if (item.recipe) {
       item.recipe.ingredients.forEach((ing) => {
-        if (!set.has(ing.item)) {
-          set.add(ing.item);
+        if (!down.has(ing.item)) {
+          down.add(ing.item);
           downQueue.push(ing.item);
         }
+        set.add(ing.item);
       });
     }
   }
 
-  return set;
+  return { all: set, down };
 }
 
 function sectionOf(node) {
@@ -612,18 +618,35 @@ function render() {
   const masteryPct = skill === "alchemy" ? getMasteryBonusPercent(mastery) : 0;
   const results = computeAll(selectedId, targetQty, masteryPct);
 
-  const bySection = {};
-  Object.values(results).forEach((node) => {
-    const sec = sectionOf(node);
-    if (!bySection[sec]) bySection[sec] = [];
-    bySection[sec].push(node);
-  });
-
   const s = t();
 
   // Odak (tıklanan madde) artık bu ağaçta yoksa (hedef/meslek değişti) temizle.
   if (focusId && !results[focusId]) focusId = null;
-  const focusSet = focusId ? computeFocusSet(focusId, results) : null;
+
+  // Odak modunda, odaklanan madde ve onun ALTINDAKİ malzemeler artık ağacın
+  // TÜM dallarının toplam ihtiyacı yerine SADECE odaklanan maddenin kendi
+  // gerekli miktarına göre yeniden hesaplanır — böylece "önce sadece bunu
+  // üreteceğim, buna ne lazım" sorusuna, aynı hammaddeyi kullanan alakasız
+  // başka dallardan etkilenmeyen bir cevap verilir. Üst (ata) maddeler ise
+  // hâlâ tüm projenin gerçek toplamını gösterir.
+  let focusSet = null;
+  let focusResults = null;
+  if (focusId) {
+    focusSet = computeFocusSet(focusId, results);
+    focusResults = computeAll(focusId, results[focusId].required, masteryPct);
+  }
+
+  function displayNode(id) {
+    return focusResults && focusSet.down.has(id) && focusResults[id] ? focusResults[id] : results[id];
+  }
+
+  const bySection = {};
+  Object.keys(results).forEach((id) => {
+    const node = displayNode(id);
+    const sec = sectionOf(node);
+    if (!bySection[sec]) bySection[sec] = [];
+    bySection[sec].push(node);
+  });
 
   updateFocusChip();
 
@@ -638,7 +661,7 @@ function render() {
   const filteredSections = {};
   SECTION_ORDER.forEach((sec) => {
     const items = (bySection[sec] || []).filter((node) =>
-      (!focusSet || focusSet.has(node.id)) && matchesQuery(node)
+      (!focusSet || focusSet.all.has(node.id)) && matchesQuery(node)
     );
     if (items.length > 0) filteredSections[sec] = items;
   });
@@ -670,7 +693,8 @@ function render() {
     items
       .sort((a, b) => nameFor(a).primary.localeCompare(nameFor(b).primary, lang))
       .forEach((node) => {
-        cardsWrap.appendChild(renderCard(node, results));
+        const cardResults = focusSet && focusSet.down.has(node.id) ? focusResults : results;
+        cardsWrap.appendChild(renderCard(node, cardResults));
       });
 
     section.appendChild(cardsWrap);
