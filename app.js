@@ -395,19 +395,19 @@ function computeAll(rootId, targetQty, masteryPct) {
     let producedQty = 0;
 
     if (item.recipe && missing > 0) {
-      // Malzeme ihtiyacı HER ZAMAN garanti edilen temel (minimum) çıktıya
-      // göre hesaplanır — Mastery bir ORTALAMA/şansa bağlı bonus olduğu için
-      // buna güvenip alt malzeme ihtiyacını azaltmıyoruz (güvenli/muhafazakar
-      // taraf). "Çıkar" olarak gösterilen sayı ise sadece BİLGİ amaçlıdır:
       // Mastery, RNG aralıklı (ör. 1-4) tariflerde o aralığın MAKSİMUMUNU
       // alma şansını artırır ("+Chance for Max" — düz bir çarpan değildir),
-      // bu yüzden beklenen değer min ile max arasında bu şansa göre
-      // enterpole edilir. Sabit/tek çıktılı tariflerde (artıracak bir
-      // "maksimum" olmadığından) Mastery'nin çıktıya hiçbir etkisi yoktur.
-      batches = Math.ceil(missing / item.recipe.output_qty);
+      // bu yüzden beklenen (ortalama) çıktı min ile max arasında bu şansa
+      // göre enterpole edilir. Kaç kez üretim yapman gerektiği (batches) —
+      // dolayısıyla alt malzeme ihtiyacı — bu GERÇEKÇİ ortalamaya göre
+      // hesaplanır (aksi halde ör. 15000 adet gerekirken tarifin garanti
+      // minimumuna göre 15000 kez üretim + Mastery bonusuyla 43000 adet gibi
+      // gereksiz bir fazlalık çıkar). Sabit/tek çıktılı tariflerde (artıracak
+      // bir "maksimum" olmadığından) Mastery'nin hiçbir etkisi yoktur.
       const expectedOutputQty = hasYieldBonus
         ? rngRange.min + (masteryPct / 100) * (rngRange.max - rngRange.min)
         : item.recipe.output_qty;
+      batches = Math.ceil(missing / expectedOutputQty);
       producedQty = Math.round(batches * expectedOutputQty);
     }
 
