@@ -1096,9 +1096,12 @@ function buildStepper(node, isHigher) {
   // yazılabilen bir sayı kutusu — büyük miktarlar (yüzlerce/binlerce) için
   // tek tek tıklamak işlevsiz olduğundan kaldırıldı.
   const input = document.createElement("input");
-  input.type = "number";
-  input.min = "0";
-  input.step = "1";
+  // type="text" + inputmode="numeric" (type="number" değil): repaint sırasında
+  // odağı/imleç konumunu geri yüklemek için setSelectionRange gerekiyor, ve
+  // tarayıcılar bunu type="number" input'larda desteklemiyor (atıyor).
+  input.type = "text";
+  input.inputMode = "numeric";
+  input.autocomplete = "off";
   input.dataset.item = node.id;
   input.className = "qty-input " + (isHigher ? "stock-field-higher" : "stock-field");
   input.value = isHigher ? (stockHigh[node.id] || 0) : (stock[node.id] || 0);
@@ -1745,9 +1748,45 @@ function paintTargetBar(model) {
 
 // ── Ana repaint orkestrasyonu ───────────────────────────────────────────
 
+// repaint() ilgili konteynerin innerHTML'ini tamamen sıfırlayıp yeniden inşa
+// eder — bu yüzden o an odaklı bir stok input'u varsa (kullanıcı hâlâ
+// yazıyorken debounce süresi dolup repaint tetiklenmişse) odak/imleç konumu
+// kaybolur ve kullanıcı hücreden "atılmış" gibi hisseder. Repaint öncesi
+// hangi input'ta olduğumuzu (ve hangi yüzeyde — huni/tablo/çekmece) kaydedip
+// yeniden inşadan sonra AYNI id'li input'a odağı ve imleç konumunu geri
+// yüklüyoruz.
+function captureStockFocus() {
+  const active = document.activeElement;
+  if (!active || !active.classList ||
+    !(active.classList.contains("stock-field") || active.classList.contains("stock-field-higher"))) {
+    return null;
+  }
+  const container = active.closest("#stockDrawerList") || active.closest("#funnelView") || active.closest("#tableRows");
+  if (!container) return null;
+  return {
+    containerId: container.id,
+    id: active.dataset.item,
+    cls: active.classList.contains("stock-field-higher") ? "stock-field-higher" : "stock-field",
+    selStart: active.selectionStart,
+    selEnd: active.selectionEnd
+  };
+}
+
+function restoreStockFocus(refocus) {
+  if (!refocus) return;
+  const container = document.getElementById(refocus.containerId);
+  const newEl = container && container.querySelector(`.${refocus.cls}[data-item="${CSS.escape(refocus.id)}"]`);
+  if (!newEl) return;
+  newEl.focus();
+  try { newEl.setSelectionRange(refocus.selStart, refocus.selEnd); } catch (e) { /* no-op */ }
+}
+
 function repaint() {
+  const refocus = captureStockFocus();
+
   if (activeScreen === "gather") {
     paintGather();
+    restoreStockFocus(refocus);
     return;
   }
   document.getElementById("gatherView").hidden = true;
@@ -1760,11 +1799,13 @@ function repaint() {
     document.getElementById("funnelView").innerHTML = "";
     document.getElementById("tableRows").innerHTML = "";
     paintFocusBar({ results: {} });
+    restoreStockFocus(refocus);
     return;
   }
   paintFocusBar(model);
   if (view === "funnel") paintFunnel(model);
   else paintTable(model);
+  restoreStockFocus(refocus);
 }
 
 function setSearch(value) {
