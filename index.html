@@ -39,6 +39,7 @@
       <input type="number" id="masteryInput" min="0" max="3000" step="1" value="0">
       <span class="mastery-hint" id="masteryHint"></span>
     </div>
+    <button id="stockPanelToggle" class="secondary-btn" type="button">Stok Gir</button>
     <button id="resetStockBtn" class="secondary-btn" type="button">Tüm stokları sıfırla</button>
   </section>
 
@@ -54,6 +55,11 @@
   </section>
 
   <section id="tree" class="tree" aria-label="İhtiyaç ağacı"></section>
+
+  <section id="stockPanel" class="stock-panel" aria-label="Toplu stok girişi" hidden>
+    <input type="text" id="stockPanelSearch" placeholder="Malzeme ara...">
+    <div id="stockPanelList" class="stock-panel-list"></div>
+  </section>
 </main>
 
 <footer>

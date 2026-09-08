@@ -69,6 +69,8 @@ let focusId = null; // türetilir: focusChain[focusChain.length - 1] ya da null
 // eklenip eklenmeyeceğine (mevcut odağın altında mı) karar vermek için kullanılır.
 let lastFocusDeepestIds = new Set();
 let funnelQuery = ""; // ağaç içi arama metni
+let stockPanelOpen = false; // toplu stok girişi paneli açık mı
+let stockPanelQuery = ""; // stok panelindeki arama metni
 
 function loadStock() {
   try {
@@ -203,6 +205,9 @@ const STRINGS = {
     masteryLabel: "Simya Mastery (0-3000)",
     masteryHint: (pct) => (pct > 0 ? `→ üretimde +%${pct} verim` : ""),
     resetStock: "Tüm stokları sıfırla",
+    stockPanelShow: "Stok Gir",
+    stockPanelHide: "Ağaca Dön",
+    stockPanelSearchPlaceholder: "Malzeme ara...",
     legendMissing: "Eksik / toplaman gereken",
     legendOk: "Elindeki stok yeterli",
     legendRaw: "Ham madde (üretilmez, toplanır/satın alınır)",
@@ -252,6 +257,9 @@ const STRINGS = {
     masteryLabel: "Alchemy Mastery (0-3000)",
     masteryHint: (pct) => (pct > 0 ? `→ +${pct}% yield` : ""),
     resetStock: "Reset all stock",
+    stockPanelShow: "Enter Stock",
+    stockPanelHide: "Back to Tree",
+    stockPanelSearchPlaceholder: "Search materials...",
     legendMissing: "Missing / need to gather",
     legendOk: "You have enough in stock",
     legendRaw: "Raw material (not crafted — gather/hunt/buy)",
@@ -777,6 +785,102 @@ function render() {
   });
 }
 
+// Ağaçtan bağımsız, o an seçili mesleğin (Simya/Aşçılık) TÜM maddelerini
+// (ham madde + üretilebilen her şey) tek bir compact listede gösterir —
+// belirli bir hedefe bağlı olmadan hızlıca toplu stok girmek için.
+function renderStockPanel() {
+  const s = t();
+  const listEl = document.getElementById("stockPanelList");
+  listEl.innerHTML = "";
+
+  const query = stockPanelQuery.trim().toLocaleLowerCase(lang);
+  const byTier = {};
+  Object.entries(RECIPES.items).forEach(([id, item]) => {
+    if ((item.skill || "alchemy") !== skill) return;
+    const { primary, secondary } = nameFor(item);
+    const matches = !query ||
+      primary.toLocaleLowerCase(lang).includes(query) ||
+      (secondary && secondary.toLocaleLowerCase(lang).includes(query));
+    if (!matches) return;
+    const tier = item.tier || "craftable";
+    if (!byTier[tier]) byTier[tier] = [];
+    byTier[tier].push({ id, item });
+  });
+
+  const activeTiers = SECTION_ORDER.filter((tier) => byTier[tier] && byTier[tier].length);
+
+  if (activeTiers.length === 0) {
+    const noResults = document.createElement("div");
+    noResults.className = "no-results";
+    noResults.textContent = s.noResults;
+    listEl.appendChild(noResults);
+    return;
+  }
+
+  activeTiers.forEach((tier) => {
+    const group = document.createElement("div");
+    group.className = "stock-panel-group";
+    const heading = document.createElement("h2");
+    heading.textContent = tier === "craftable" ? s.craftableLabelFor(skill) : (s.sections[tier] || tier);
+    group.appendChild(heading);
+
+    const grid = document.createElement("div");
+    grid.className = "stock-panel-grid";
+
+    byTier[tier]
+      .sort((a, b) => nameFor(a.item).primary.localeCompare(nameFor(b.item).primary, lang))
+      .forEach(({ id, item }) => {
+        grid.appendChild(renderStockPanelRow(id, item));
+      });
+
+    group.appendChild(grid);
+    listEl.appendChild(group);
+  });
+}
+
+function renderStockPanelRow(id, item) {
+  const { primary, secondary } = nameFor(item);
+  const row = document.createElement("div");
+  row.className = "stock-panel-row";
+
+  if (item.icon) {
+    const icon = document.createElement("img");
+    icon.className = "node-icon";
+    icon.src = item.icon;
+    icon.alt = "";
+    icon.loading = "lazy";
+    row.appendChild(icon);
+  }
+
+  const nameDiv = document.createElement("div");
+  nameDiv.className = "stock-panel-row-name";
+  nameDiv.innerHTML = secondary ? `${primary} <span class="en">· ${secondary}</span>` : primary;
+  row.appendChild(nameDiv);
+
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = "0";
+  input.step = "1";
+  input.dataset.item = id;
+  input.value = stock[id] || 0;
+  input.className = "stock-field";
+  row.appendChild(input);
+
+  if (item.tier === "elixir") {
+    const higherInput = document.createElement("input");
+    higherInput.type = "number";
+    higherInput.min = "0";
+    higherInput.step = "1";
+    higherInput.dataset.item = id;
+    higherInput.value = stockHigh[id] || 0;
+    higherInput.className = "stock-field-higher";
+    higherInput.title = t().higherGradeHint(HIGHER_GRADE_RATIO);
+    row.appendChild(higherInput);
+  }
+
+  return row;
+}
+
 function populateSelect(preserveSelection) {
   const itemSelect = document.getElementById("itemSelect");
   const prevValue = preserveSelection ? itemSelect.value : null;
@@ -847,6 +951,8 @@ function applyStaticText() {
   document.getElementById("masteryGroup").style.display = skill === "alchemy" ? "" : "none";
   updateMasteryHint();
   document.getElementById("resetStockBtn").textContent = s.resetStock;
+  document.getElementById("stockPanelToggle").textContent = stockPanelOpen ? s.stockPanelHide : s.stockPanelShow;
+  document.getElementById("stockPanelSearch").placeholder = s.stockPanelSearchPlaceholder;
   document.getElementById("legendMissing").textContent = s.legendMissing;
   document.getElementById("legendOk").textContent = s.legendOk;
   document.getElementById("legendRaw").textContent = s.legendRaw;
@@ -914,6 +1020,7 @@ function setLang(newLang) {
   populateSelect(true);
   document.getElementById("itemSearch").value = "";
   render();
+  if (stockPanelOpen) renderStockPanel();
 }
 
 function setSkill(newSkill) {
@@ -927,6 +1034,7 @@ function setSkill(newSkill) {
   funnelQuery = "";
   document.getElementById("funnelSearch").value = "";
   render();
+  if (stockPanelOpen) renderStockPanel();
 }
 
 function init() {
@@ -1015,34 +1123,8 @@ function init() {
     btn.addEventListener("click", () => setSkill(btn.dataset.skill));
   });
 
-  document.getElementById("tree").addEventListener("input", (e) => {
-    const isBase = e.target.classList.contains("stock-field");
-    const isHigher = e.target.classList.contains("stock-field-higher");
-    if (isBase || isHigher) {
-      const id = e.target.dataset.item;
-      const cls = isBase ? "stock-field" : "stock-field-higher";
-      const selStart = e.target.selectionStart;
-      const scrollY = window.scrollY;
-      const val = Math.max(0, parseInt(e.target.value, 10) || 0);
-      if (isBase) {
-        stock[id] = val;
-        saveStock();
-      } else {
-        stockHigh[id] = val;
-        saveStockHigh();
-      }
-      render();
-
-      // Tüm liste yeniden çizildiği için düzenlenmekte olan input'un
-      // focus/cursor/scroll konumunu geri yüklüyoruz.
-      const restored = document.querySelector(`input.${cls}[data-item="${CSS.escape(id)}"]`);
-      if (restored) {
-        restored.focus();
-        try { restored.setSelectionRange(selStart, selStart); } catch (err) { /* no-op */ }
-      }
-      window.scrollTo(0, scrollY);
-    }
-  });
+  document.getElementById("tree").addEventListener("input", (e) => handleStockFieldInput(e, render));
+  document.getElementById("stockPanelList").addEventListener("input", (e) => handleStockFieldInput(e, renderStockPanel));
 
   document.getElementById("resetStockBtn").addEventListener("click", () => {
     stock = {};
@@ -1050,9 +1132,54 @@ function init() {
     saveStock();
     saveStockHigh();
     render();
+    if (stockPanelOpen) renderStockPanel();
+  });
+
+  document.getElementById("stockPanelToggle").addEventListener("click", () => {
+    stockPanelOpen = !stockPanelOpen;
+    document.getElementById("tree").hidden = stockPanelOpen;
+    document.getElementById("stockPanel").hidden = !stockPanelOpen;
+    document.getElementById("stockPanelToggle").textContent = stockPanelOpen ? t().stockPanelHide : t().stockPanelShow;
+    if (stockPanelOpen) renderStockPanel();
+  });
+
+  document.getElementById("stockPanelSearch").addEventListener("input", (e) => {
+    stockPanelQuery = e.target.value;
+    renderStockPanel();
   });
 
   render();
+}
+
+// Bir stok input'undaki (temel ya da üst kalite) değişikliği işler; hem
+// ağaçtaki hem de toplu stok panelindeki alanlar için ortak kullanılır.
+function handleStockFieldInput(e, rerender) {
+  const isBase = e.target.classList.contains("stock-field");
+  const isHigher = e.target.classList.contains("stock-field-higher");
+  if (!isBase && !isHigher) return;
+
+  const id = e.target.dataset.item;
+  const cls = isBase ? "stock-field" : "stock-field-higher";
+  const selStart = e.target.selectionStart;
+  const scrollY = window.scrollY;
+  const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+  if (isBase) {
+    stock[id] = val;
+    saveStock();
+  } else {
+    stockHigh[id] = val;
+    saveStockHigh();
+  }
+  rerender();
+
+  // Tüm liste yeniden çizildiği için düzenlenmekte olan input'un
+  // focus/cursor/scroll konumunu geri yüklüyoruz.
+  const restored = document.querySelector(`input.${cls}[data-item="${CSS.escape(id)}"]`);
+  if (restored) {
+    restored.focus();
+    try { restored.setSelectionRange(selStart, selStart); } catch (err) { /* no-op */ }
+  }
+  window.scrollTo(0, scrollY);
 }
 
 document.addEventListener("DOMContentLoaded", init);

@@ -301,6 +301,10 @@ select:focus, input:focus {
   padding-bottom: 12px;
 }
 
+.tree[hidden] {
+  display: none;
+}
+
 .tier-section {
   flex: 1 1 300px;
   min-width: 280px;
@@ -494,3 +498,74 @@ footer {
 }
 
 footer a { color: var(--accent); }
+
+.stock-panel {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.stock-panel #stockPanelSearch {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.stock-panel-group {
+  margin-bottom: 18px;
+}
+
+.stock-panel-group h2 {
+  font-size: 0.9rem;
+  color: var(--accent);
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.stock-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 4px 12px;
+}
+
+.stock-panel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.stock-panel-row:hover {
+  background: var(--card);
+}
+
+.stock-panel-row .node-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.stock-panel-row-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stock-panel-row-name .en {
+  color: var(--text-dim);
+  font-size: 0.76rem;
+}
+
+.stock-panel-row input {
+  width: 64px;
+  padding: 3px 6px;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.stock-panel-row input.stock-field-higher {
+  border-color: var(--accent-dim);
+}
