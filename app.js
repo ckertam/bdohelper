@@ -219,10 +219,10 @@ const STRINGS = {
     methodSimple: (sk) => (sk === "cooking" ? "Basit Yemek" : "Basit Kimya"),
     methodTool: (sk) => (sk === "cooking" ? "Aşçılık Aleti" : "Kimya Aleti"),
     ingredientsLabel: "Malzemeler:",
-    ingredientLine: (name, needed, missing) => (
+    ingredientLine: (name, perCraft, needed, missing) => (
       missing > 0
-        ? `${name}: ${needed} gerekli (${missing} eksik)`
-        : `${name}: ${needed} gerekli (yeterli)`
+        ? `${name}: 1 üretim için ${perCraft} adet — toplam ${needed} gerekli (${missing} eksik)`
+        : `${name}: 1 üretim için ${perCraft} adet — toplam ${needed} gerekli (yeterli)`
     ),
     usedIn: "Kullanıldığı yer(ler):",
     funnelSearchPlaceholder: "Ağaçta ara...",
@@ -268,8 +268,10 @@ const STRINGS = {
     methodSimple: (sk) => (sk === "cooking" ? "Simple Cooking" : "Simple Alchemy"),
     methodTool: (sk) => (sk === "cooking" ? "Cooking Utensil" : "Alchemy Tool"),
     ingredientsLabel: "Ingredients:",
-    ingredientLine: (name, needed, missing) => (
-      missing > 0 ? `${name}: ${needed} needed (${missing} missing)` : `${name}: ${needed} needed (sufficient)`
+    ingredientLine: (name, perCraft, needed, missing) => (
+      missing > 0
+        ? `${name}: ${perCraft} per craft — ${needed} total needed (${missing} missing)`
+        : `${name}: ${perCraft} per craft — ${needed} total needed (sufficient)`
     ),
     usedIn: "Used in:",
     funnelSearchPlaceholder: "Search the tree...",
@@ -583,7 +585,7 @@ function renderCard(node, allResults) {
       const ingMissing = Math.max(0, neededHere - ingHave);
       const line = document.createElement("div");
       line.className = "ingredient-line" + (ingMissing > 0 ? " missing" : " satisfied");
-      line.textContent = s.ingredientLine(ingName, neededHere, ingMissing);
+      line.textContent = s.ingredientLine(ingName, ing.qty, neededHere, ingMissing);
       ingredientsWrap.appendChild(line);
     });
 
@@ -943,6 +945,8 @@ function init() {
     if (crumb) {
       const level = parseInt(crumb.dataset.level, 10);
       focusChain = focusChain.slice(0, level + 1);
+      funnelQuery = "";
+      document.getElementById("funnelSearch").value = "";
       render();
     }
   });
@@ -952,10 +956,17 @@ function init() {
     if (!card) return;
     const id = card.dataset.item;
 
+    // Odaklanınca ağaç aramasını temizle: aksi halde arama metniyle
+    // eşleşmeyen ata/alt maddeler (odağın "geçmişi") gizli kalmaya devam eder.
+    funnelQuery = "";
+    document.getElementById("funnelSearch").value = "";
+
     const idx = focusChain.indexOf(id);
     if (idx !== -1) {
-      // Zincirde zaten var: en derindekiyse odağı tamamen kapat, değilse o kademeye geri dön.
-      focusChain = idx === focusChain.length - 1 ? [] : focusChain.slice(0, idx + 1);
+      // Zincirde zaten var: o kademeye geri dön (breadcrumb'daki aynı
+      // maddeye tıklamakla birebir aynı davranış). En derindeki maddeyse bu
+      // bir no-op'tur — odağı tamamen kapatmak için ✕ butonu kullanılır.
+      focusChain = focusChain.slice(0, idx + 1);
     } else if (focusChain.length > 0 && lastFocusDeepestIds.has(id)) {
       // Mevcut odağın KENDİ kapsamındaki bir malzeme: kapsamı daha da daralt.
       focusChain.push(id);
