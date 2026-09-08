@@ -240,6 +240,21 @@ select:focus, input:focus {
 }
 
 .focus-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.focus-chip-label {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.focus-chip-crumb,
+.focus-chip-clear {
   background: var(--accent);
   color: #1a1a1a;
   border: none;
@@ -249,6 +264,26 @@ select:focus, input:focus {
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.focus-chip-crumb:not(:last-of-type) {
+  opacity: 0.75;
+}
+
+.focus-chip-crumb:hover {
+  opacity: 1;
+}
+
+.focus-chip-sep {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.focus-chip-clear {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 6px 10px;
 }
 
 .no-results {

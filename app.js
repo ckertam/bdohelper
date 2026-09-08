@@ -58,7 +58,16 @@ let lang = loadLang();
 let mastery = loadMastery();
 let skill = loadSkill();
 let selectedItems = loadSelectedItems();
-let focusId = null; // tıklanan madde: sadece bununla ilişkili maddeler gösterilir
+// Odak zinciri: sırayla tıklanan maddeler. Bir madde, o an odaklanılmış
+// maddenin ALTINDAKİ bir malzemeyse zincire eklenir (kapsam daha da daralır,
+// ör. Elixir of Wind -> Wise Man's Blood); değilse zincir o maddeyle sıfırdan
+// başlar. focusId her zaman zincirdeki en derin (son) maddedir.
+let focusChain = [];
+let focusId = null; // türetilir: focusChain[focusChain.length - 1] ya da null
+// En son render()'da hesaplanan, odaktaki en derin maddenin kapsamındaki
+// (kendisi + tüm alt malzemeleri) id kümesi. Bir sonraki tıklamanın zincire
+// eklenip eklenmeyeceğine (mevcut odağın altında mı) karar vermek için kullanılır.
+let lastFocusDeepestIds = new Set();
 let funnelQuery = ""; // ağaç içi arama metni
 
 function loadStock() {
@@ -218,6 +227,8 @@ const STRINGS = {
     usedIn: "Kullanıldığı yer(ler):",
     funnelSearchPlaceholder: "Ağaçta ara...",
     focusChip: (name) => `🔎 Odak: ${name} ✕`,
+    focusLabel: "🔎 Odak:",
+    clearFocus: "✕",
     noResults: "Eşleşen madde yok.",
     footer: 'Veriler <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a> kaynak alınarak hazırlanmıştır. Oyun içi güncellemelerle miktarlar değişebilir.',
     sections: {
@@ -263,6 +274,8 @@ const STRINGS = {
     usedIn: "Used in:",
     funnelSearchPlaceholder: "Search the tree...",
     focusChip: (name) => `🔎 Focus: ${name} ✕`,
+    focusLabel: "🔎 Focus:",
+    clearFocus: "✕",
     noResults: "No matching items.",
     footer: 'Data sourced from <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a>. Quantities may change with game updates.',
     sections: {
@@ -630,29 +643,51 @@ function render() {
 
   const s = t();
 
-  // Odak (tıklanan madde) artık bu ağaçta yoksa (hedef/meslek değişti) temizle.
-  if (focusId && !results[focusId]) focusId = null;
+  // Odak zincirinde artık bu ağaçta bulunmayan (hedef/meslek değişti) maddeler varsa temizle.
+  focusChain = focusChain.filter((id) => results[id]);
+  focusId = focusChain.length ? focusChain[focusChain.length - 1] : null;
 
-  // Odak modunda, odaklanan madde ve onun ALTINDAKİ malzemeler artık ağacın
-  // TÜM dallarının toplam ihtiyacı yerine SADECE odaklanan maddenin kendi
-  // gerekli miktarına göre yeniden hesaplanır — böylece "önce sadece bunu
-  // üreteceğim, buna ne lazım" sorusuna, aynı hammaddeyi kullanan alakasız
-  // başka dallardan etkilenmeyen bir cevap verilir. Üst (ata) maddeler ise
-  // hâlâ tüm projenin gerçek toplamını gösterir.
+  // Odak zincirindeki her adım, bir öncekinin kendi gerekli miktarını kök
+  // alarak yeniden hesaplanır — böylece "önce sadece Elixir of Wind
+  // üreteceğim, sonra onun Wise Man's Blood ihtiyacı ne" gibi art arda
+  // daraltmalar, aynı hammaddeyi kullanan alakasız başka dallardan
+  // etkilenmeyen bir cevap verir. Zincirin İLK maddesinin üstündeki (ata)
+  // maddeler ise hâlâ tüm projenin gerçek toplamını gösterir.
   let focusSet = null;
-  let focusResults = null;
-  if (focusId) {
-    focusSet = computeFocusSet(focusId, results);
-    focusResults = computeAll(focusId, results[focusId].required, masteryPct);
+  const levelResultsList = [];
+  if (focusChain.length) {
+    focusSet = computeFocusSet(focusChain[0], results);
+    let prevResults = results;
+    focusChain.forEach((id) => {
+      const req = prevResults[id] ? prevResults[id].required : 0;
+      const lvl = computeAll(id, req, masteryPct);
+      levelResultsList.push(lvl);
+      prevResults = lvl;
+    });
+  }
+  // Odaktaki en derin maddenin kendi kapsamındaki malzemeleri: bir sonraki
+  // tıklamada "bu da mevcut odağın altında mı" kontrolü için saklanır.
+  lastFocusDeepestIds = levelResultsList.length
+    ? new Set(Object.keys(levelResultsList[levelResultsList.length - 1]))
+    : new Set();
+
+  function resultsMapFor(id) {
+    for (let i = levelResultsList.length - 1; i >= 0; i--) {
+      if (levelResultsList[i][id]) return levelResultsList[i];
+    }
+    return results;
   }
 
-  function displayNode(id) {
-    return focusResults && focusSet.down.has(id) && focusResults[id] ? focusResults[id] : results[id];
-  }
+  const displayIds = focusSet
+    ? new Set([
+      ...[...focusSet.all].filter((id) => !focusSet.down.has(id)),
+      ...lastFocusDeepestIds
+    ])
+    : null;
 
   const bySection = {};
   Object.keys(results).forEach((id) => {
-    const node = displayNode(id);
+    const node = resultsMapFor(id)[id];
     const sec = sectionOf(node);
     if (!bySection[sec]) bySection[sec] = [];
     bySection[sec].push(node);
@@ -671,7 +706,7 @@ function render() {
   const filteredSections = {};
   SECTION_ORDER.forEach((sec) => {
     const items = (bySection[sec] || []).filter((node) =>
-      (!focusSet || focusSet.all.has(node.id)) && matchesQuery(node)
+      (!displayIds || displayIds.has(node.id)) && matchesQuery(node)
     );
     if (items.length > 0) filteredSections[sec] = items;
   });
@@ -703,8 +738,7 @@ function render() {
     items
       .sort((a, b) => nameFor(a).primary.localeCompare(nameFor(b).primary, lang))
       .forEach((node) => {
-        const cardResults = focusSet && focusSet.down.has(node.id) ? focusResults : results;
-        cardsWrap.appendChild(renderCard(node, cardResults));
+        cardsWrap.appendChild(renderCard(node, resultsMapFor(node.id)));
       });
 
     section.appendChild(cardsWrap);
@@ -808,14 +842,39 @@ function applyStaticText() {
 
 function updateFocusChip() {
   const chip = document.getElementById("focusChip");
-  if (!focusId) {
+  chip.innerHTML = "";
+  if (!focusChain.length) {
     chip.hidden = true;
-    chip.textContent = "";
     return;
   }
   const s = t();
   chip.hidden = false;
-  chip.textContent = s.focusChip(nameFor(getItem(focusId)).primary);
+
+  const label = document.createElement("span");
+  label.className = "focus-chip-label";
+  label.textContent = s.focusLabel;
+  chip.appendChild(label);
+
+  focusChain.forEach((id, i) => {
+    if (i > 0) {
+      const sep = document.createElement("span");
+      sep.className = "focus-chip-sep";
+      sep.textContent = "›";
+      chip.appendChild(sep);
+    }
+    const crumb = document.createElement("button");
+    crumb.type = "button";
+    crumb.className = "focus-chip-crumb";
+    crumb.dataset.level = i;
+    crumb.textContent = nameFor(getItem(id)).primary;
+    chip.appendChild(crumb);
+  });
+
+  const clearBtn = document.createElement("button");
+  clearBtn.type = "button";
+  clearBtn.className = "focus-chip-clear";
+  clearBtn.textContent = s.clearFocus;
+  chip.appendChild(clearBtn);
 }
 
 function updateMasteryHint() {
@@ -841,7 +900,7 @@ function setSkill(newSkill) {
   applyStaticText();
   populateSelect(false);
   document.getElementById("itemSearch").value = "";
-  focusId = null;
+  focusChain = [];
   funnelQuery = "";
   document.getElementById("funnelSearch").value = "";
   render();
@@ -855,7 +914,7 @@ function init() {
 
   document.getElementById("itemSelect").addEventListener("change", (e) => {
     saveSelectedItem(skill, e.target.value);
-    focusId = null;
+    focusChain = [];
     funnelQuery = "";
     document.getElementById("funnelSearch").value = "";
     render();
@@ -873,16 +932,37 @@ function init() {
     funnelQuery = e.target.value;
     render();
   });
-  document.getElementById("focusChip").addEventListener("click", () => {
-    focusId = null;
-    render();
+  document.getElementById("focusChip").addEventListener("click", (e) => {
+    const clearBtn = e.target.closest(".focus-chip-clear");
+    if (clearBtn) {
+      focusChain = [];
+      render();
+      return;
+    }
+    const crumb = e.target.closest(".focus-chip-crumb");
+    if (crumb) {
+      const level = parseInt(crumb.dataset.level, 10);
+      focusChain = focusChain.slice(0, level + 1);
+      render();
+    }
   });
   document.getElementById("tree").addEventListener("click", (e) => {
     if (e.target.closest(".stock-input")) return;
     const card = e.target.closest(".node");
     if (!card) return;
     const id = card.dataset.item;
-    focusId = focusId === id ? null : id;
+
+    const idx = focusChain.indexOf(id);
+    if (idx !== -1) {
+      // Zincirde zaten var: en derindekiyse odağı tamamen kapat, değilse o kademeye geri dön.
+      focusChain = idx === focusChain.length - 1 ? [] : focusChain.slice(0, idx + 1);
+    } else if (focusChain.length > 0 && lastFocusDeepestIds.has(id)) {
+      // Mevcut odağın KENDİ kapsamındaki bir malzeme: kapsamı daha da daralt.
+      focusChain.push(id);
+    } else {
+      // Alakasız ya da üst bir madde: odağı bu maddeyle sıfırdan başlat.
+      focusChain = [id];
+    }
     render();
   });
   document.getElementById("masteryInput").addEventListener("input", (e) => {
