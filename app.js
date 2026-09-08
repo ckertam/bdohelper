@@ -16,6 +16,9 @@ const MASTERY_KEY = "bdohelper_mastery_v1";
 const SKILL_KEY = "bdohelper_skill_v1";
 const SELECTED_ITEM_KEY = "bdohelper_selected_item_v1";
 const TARGET_QTY_KEY = "bdohelper_target_qty_v1";
+const VIEW_KEY = "bdohelper_view_v1";
+const EXPANDED_KEY = "bdohelper_expanded_v1";
+const CHECKED_KEY = "bdohelper_checked_v1";
 
 // bdocodex: her iksirin üst kaliteli (Advanced/Endless vb.) versiyonu, tarifte
 // istenen normal (Simple/base) iksir yerine 1:3 oranında kullanılabilir.
@@ -68,9 +71,15 @@ let focusId = null; // türetilir: focusChain[focusChain.length - 1] ya da null
 // (kendisi + tüm alt malzemeleri) id kümesi. Bir sonraki tıklamanın zincire
 // eklenip eklenmeyeceğine (mevcut odağın altında mı) karar vermek için kullanılır.
 let lastFocusDeepestIds = new Set();
-let funnelQuery = ""; // ağaç içi arama metni
-let stockPanelOpen = false; // toplu stok girişi paneli açık mı
-let stockPanelQuery = ""; // stok panelindeki arama metni
+let funnelQuery = ""; // birleşik arama metni (huni/tablo/çekmece bağlama göre yönlenir)
+let onlyMissing = false; // "SADECE EKSİKLER" filtresi
+let view = loadView(); // "funnel" | "table"
+let expandedIds = loadExpanded(); // genişletilmiş satır id'leri
+let checkedIds = loadChecked(); // toplama listesinde işaretli id'ler
+let drawerOpen = false;
+let targetEditorOpen = false;
+let activeScreen = "main"; // "main" (huni/tablo) | "gather"
+let stockCommitTimer = null;
 
 function loadStock() {
   try {
@@ -192,115 +201,218 @@ function saveTargetQty(qty) {
   }
 }
 
+function loadView() {
+  try {
+    const raw = localStorage.getItem(VIEW_KEY);
+    return raw === "table" ? "table" : "funnel";
+  } catch (e) {
+    return "funnel";
+  }
+}
+
+function saveView() {
+  try {
+    localStorage.setItem(VIEW_KEY, view);
+  } catch (e) {
+    /* no-op */
+  }
+}
+
+function loadExpanded() {
+  try {
+    const raw = localStorage.getItem(EXPANDED_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function saveExpanded() {
+  try {
+    localStorage.setItem(EXPANDED_KEY, JSON.stringify([...expandedIds]));
+  } catch (e) {
+    /* no-op */
+  }
+}
+
+function loadChecked() {
+  try {
+    const raw = localStorage.getItem(CHECKED_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function saveChecked() {
+  try {
+    localStorage.setItem(CHECKED_KEY, JSON.stringify([...checkedIds]));
+  } catch (e) {
+    /* no-op */
+  }
+}
+
 const STRINGS = {
   tr: {
     title: "BDO Helper",
-    subtitle: "Simya (Alchemy) ham madde hesaplayıcısı",
     subtitleFor: (sk) => (sk === "cooking" ? "Aşçılık ham madde hesaplayıcısı" : "Simya (Alchemy) ham madde hesaplayıcısı"),
     skillLabel: "Meslek",
     skillNames: { alchemy: "Simya", cooking: "Aşçılık" },
+    skillTagLabel: { alchemy: "SİMYA", cooking: "AŞÇILIK" },
     whatToMake: "Ne üretmek istiyorsun?",
     searchPlaceholder: "Ürün ara...",
-    howMany: "Kaç adet üretmek istiyorsun?",
-    masteryLabel: "Simya Mastery (0-3000)",
-    masteryHint: (pct) => (pct > 0 ? `→ üretimde +%${pct} verim` : ""),
-    resetStock: "Tüm stokları sıfırla",
-    stockPanelShow: "Stok Gir",
-    stockPanelHide: "Ağaca Dön",
-    stockPanelSearchPlaceholder: "Malzeme ara...",
-    legendMissing: "Eksik / toplaman gereken",
-    legendOk: "Elindeki stok yeterli",
-    legendRaw: "Ham madde (üretilmez, toplanır/satın alınır)",
-    rawBadge: "Ham Madde",
-    batchesBadge: (n, out) => `${n}x üretim (${out} adet çıkar)`,
-    batchesBadgeMastery: (n, out) => `${n}x üretim (~${out} adet çıkar, Mastery dahil)`,
+    howMany: "Adet",
+    masteryLabel: "Simya Mastery",
+    masteryHint: (pct) => (pct > 0 ? `+%${formatPct(pct)} max şansı` : ""),
+    calcBtn: "HESAPLA",
+    noTarget: "Hedef seç",
+    progressLabel: "İLERLEME",
+    progressSub: (done, total) => `${done} / ${total} malzeme tamam`,
+    searchPlaceholderGlobal: "Malzeme veya ürün ara — / ile odaklan",
+    searchResultCount: (n) => `${n} SONUÇ`,
+    viewFunnel: "HUNİ",
+    viewTable: "TABLO",
+    onlyMissingBtn: "SADECE EKSİKLER",
+    gatherBtn: "TOPLAMA LİSTESİ",
+    stockDrawerBtn: "STOK GİR",
+    resetStock: "SIFIRLA",
+    drawerTitle: "TOPLU STOK GİRİŞİ",
+    drawerSearchPlaceholder: "Malzeme ara...",
+    focusLabel: "ODAK",
+    focusScope: (n) => `— sadece bu dalın ihtiyacı gösteriliyor (${n} adet için)`,
+    clearFocus: "ODAĞI KALDIR ✕",
+    noResults: "Eşleşen madde yok.",
+    noResultsFooter: (n) => `Eşleşmeyen ${n} kalem gizlendi — `,
+    showAll: "tümünü göster",
+    legendMissing: "Eksik / toplaman gereken — kırmızı sayı",
+    legendOk: "Elindeki stok yeterli — ✓",
+    legendRaw: "Ham madde — üretilmez, toplanır/satın alınır",
+    reqShort: (n) => `${n} gerekli`,
+    haveShort: (n) => `${n} elimde`,
+    batchesBadge: (n, out) => `${n}× üretim → ${out} adet`,
+    batchesBadgeMastery: (n, out) => `${n}× üretim → ~${out} adet, Mastery dahil`,
     totalRequired: "Toplam gerekli",
     missing: (n) => `${n} eksik`,
     sufficient: "yeterli",
-    inStock: "Elimde:",
+    inStock: "Elimde",
     simpleAlchemyNote: "Basit Kimya ile yapılır: Simya Mastery bu ürünün miktarını artırmaz.",
-    inStockHigher: "Üst kalite (Adv/Endless) elimde:",
+    inStockHigher: "Üst kalite (Adv/Endless) elimde",
     higherGradeHint: (ratio) => `1 üst kalite = ${ratio} adet`,
     methodSimple: (sk) => (sk === "cooking" ? "Basit Yemek" : "Basit Kimya"),
     methodTool: (sk) => (sk === "cooking" ? "Aşçılık Aleti" : "Kimya Aleti"),
-    ingredientsLabel: "Malzemeler:",
+    ingredientsLabel: "Malzemeler",
     ingredientLine: (name, perCraft, needed, missing) => (
       missing > 0
         ? `${name}: 1 üretim için ${perCraft} adet — toplam ${needed} gerekli (${missing} eksik)`
         : `${name}: 1 üretim için ${perCraft} adet — toplam ${needed} gerekli (yeterli)`
     ),
     usedIn: "Kullanıldığı yer(ler):",
-    funnelSearchPlaceholder: "Ağaçta ara...",
-    focusChip: (name) => `🔎 Odak: ${name} ✕`,
-    focusLabel: "🔎 Odak:",
-    clearFocus: "✕",
-    noResults: "Eşleşen madde yok.",
+    colName: "MALZEME", colTier: "KADEME", colReq: "GEREKLİ", colHave: "ELİMDE",
+    colMiss: "EKSİK", colCraft: "ÜRETİM", colProgress: "İLERLEME",
+    tierFilterAll: "TÜMÜ",
+    gatherTitle: "Toplama listesi",
+    gatherSubFor: (name, qty, n) => `${name} × ${qty} için eksik ${n} kalem`,
+    groupGather: "TOPLANACAK / AVLANACAK",
+    groupBuy: "PAZARDAN / NPC'DEN ALINACAK",
+    itemsCount: (n) => `${n} kalem`,
+    copyBtn: "KOPYALA",
+    backBtn: "AĞACA DÖN",
+    costLabel: "TAHMİNİ PAZAR MALİYETİ",
+    silverUnit: "gümüş",
     footer: 'Veriler <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a> kaynak alınarak hazırlanmıştır. Oyun içi güncellemelerle miktarlar değişebilir.',
     sections: {
-      final: "Ana Ürün",
-      mid: "Ara İksirler",
-      elixir: "İksirler",
-      craftable: "Diğer Simya Ürünleri (Reaktif / Kristal vb.)",
-      raw: "Ham Maddeler / Satın Alınanlar"
+      final: "ANA ÜRÜN",
+      mid: "ÖZ İKSİR",
+      elixir: "İKSİR",
+      craftable: "REAKTİF / KRİSTAL",
+      raw: "HAM MADDE"
     },
-    craftableLabelFor: (sk) => (sk === "cooking" ? "Aşçılık Ürünleri (Yemek / Tatlı vb.)" : "Diğer Simya Ürünleri (Reaktif / Kristal vb.)")
+    craftableLabelFor: (sk) => (sk === "cooking" ? "AŞÇILIK ÜRÜNÜ" : "REAKTİF / KRİSTAL")
   },
   en: {
     title: "BDO Helper",
-    subtitle: "Alchemy raw-material calculator",
     subtitleFor: (sk) => (sk === "cooking" ? "Cooking raw-material calculator" : "Alchemy raw-material calculator"),
     skillLabel: "Profession",
     skillNames: { alchemy: "Alchemy", cooking: "Cooking" },
+    skillTagLabel: { alchemy: "ALCHEMY", cooking: "COOKING" },
     whatToMake: "What do you want to craft?",
     searchPlaceholder: "Search item...",
-    howMany: "How many do you want to craft?",
-    masteryLabel: "Alchemy Mastery (0-3000)",
-    masteryHint: (pct) => (pct > 0 ? `→ +${pct}% yield` : ""),
-    resetStock: "Reset all stock",
-    stockPanelShow: "Enter Stock",
-    stockPanelHide: "Back to Tree",
-    stockPanelSearchPlaceholder: "Search materials...",
-    legendMissing: "Missing / need to gather",
-    legendOk: "You have enough in stock",
-    legendRaw: "Raw material (not crafted — gather/hunt/buy)",
-    rawBadge: "Raw Material",
-    batchesBadge: (n, out) => `${n}x craft (yields ${out})`,
-    batchesBadgeMastery: (n, out) => `${n}x craft (~${out} yielded, Mastery incl.)`,
+    howMany: "Qty",
+    masteryLabel: "Alchemy Mastery",
+    masteryHint: (pct) => (pct > 0 ? `+${formatPct(pct)}% max chance` : ""),
+    calcBtn: "CALCULATE",
+    noTarget: "Pick a target",
+    progressLabel: "PROGRESS",
+    progressSub: (done, total) => `${done} / ${total} materials done`,
+    searchPlaceholderGlobal: "Search materials or products — press / to focus",
+    searchResultCount: (n) => `${n} RESULTS`,
+    viewFunnel: "FUNNEL",
+    viewTable: "TABLE",
+    onlyMissingBtn: "MISSING ONLY",
+    gatherBtn: "GATHER LIST",
+    stockDrawerBtn: "ENTER STOCK",
+    resetStock: "RESET",
+    drawerTitle: "BULK STOCK ENTRY",
+    drawerSearchPlaceholder: "Search materials...",
+    focusLabel: "FOCUS",
+    focusScope: (n) => `— showing only this branch's needs (for ${n})`,
+    clearFocus: "CLEAR FOCUS ✕",
+    noResults: "No matching items.",
+    noResultsFooter: (n) => `${n} non-matching items hidden — `,
+    showAll: "show all",
+    legendMissing: "Missing / need to gather — red number",
+    legendOk: "You have enough — ✓",
+    legendRaw: "Raw material — gather/hunt/buy",
+    reqShort: (n) => `${n} needed`,
+    haveShort: (n) => `${n} owned`,
+    batchesBadge: (n, out) => `${n}× craft → ${out} units`,
+    batchesBadgeMastery: (n, out) => `${n}× craft → ~${out} units, Mastery incl.`,
     totalRequired: "Total required",
     missing: (n) => `${n} missing`,
     sufficient: "sufficient",
-    inStock: "In stock:",
+    inStock: "In stock",
     simpleAlchemyNote: "Made via Simple Alchemy: Alchemy Mastery does not increase this item's yield.",
-    inStockHigher: "Higher-grade (Adv/Endless) owned:",
+    inStockHigher: "Higher-grade (Adv/Endless) owned",
     higherGradeHint: (ratio) => `1 higher-grade = ${ratio} units`,
     methodSimple: (sk) => (sk === "cooking" ? "Simple Cooking" : "Simple Alchemy"),
     methodTool: (sk) => (sk === "cooking" ? "Cooking Utensil" : "Alchemy Tool"),
-    ingredientsLabel: "Ingredients:",
+    ingredientsLabel: "Ingredients",
     ingredientLine: (name, perCraft, needed, missing) => (
       missing > 0
         ? `${name}: ${perCraft} per craft — ${needed} total needed (${missing} missing)`
         : `${name}: ${perCraft} per craft — ${needed} total needed (sufficient)`
     ),
     usedIn: "Used in:",
-    funnelSearchPlaceholder: "Search the tree...",
-    focusChip: (name) => `🔎 Focus: ${name} ✕`,
-    focusLabel: "🔎 Focus:",
-    clearFocus: "✕",
-    noResults: "No matching items.",
+    colName: "MATERIAL", colTier: "TIER", colReq: "NEEDED", colHave: "OWNED",
+    colMiss: "MISSING", colCraft: "CRAFT", colProgress: "PROGRESS",
+    tierFilterAll: "ALL",
+    gatherTitle: "Gathering list",
+    gatherSubFor: (name, qty, n) => `${n} items missing for ${name} × ${qty}`,
+    groupGather: "TO GATHER / HUNT",
+    groupBuy: "TO BUY (MARKET / NPC)",
+    itemsCount: (n) => `${n} items`,
+    copyBtn: "COPY",
+    backBtn: "BACK TO TREE",
+    costLabel: "ESTIMATED MARKET COST",
+    silverUnit: "silver",
     footer: 'Data sourced from <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a>. Quantities may change with game updates.',
     sections: {
-      final: "Final Product",
-      mid: "Intermediate Draughts",
-      elixir: "Elixirs",
-      craftable: "Other Alchemy Products (Reagents / Crystals etc.)",
-      raw: "Raw Materials / Purchased Items"
+      final: "FINAL PRODUCT",
+      mid: "DRAUGHT",
+      elixir: "ELIXIR",
+      craftable: "REAGENT / CRYSTAL",
+      raw: "RAW MATERIAL"
     },
-    craftableLabelFor: (sk) => (sk === "cooking" ? "Cooking Products (Dishes / Desserts etc.)" : "Other Alchemy Products (Reagents / Crystals etc.)")
+    craftableLabelFor: (sk) => (sk === "cooking" ? "COOKING PRODUCT" : "REAGENT / CRYSTAL")
   }
 };
 
 function t() {
   return STRINGS[lang];
+}
+
+function formatPct(n) {
+  return lang === "tr" ? String(n).replace(".", ",") : String(n);
 }
 
 function nameFor(item) {
@@ -504,185 +616,66 @@ function sectionOf(node) {
 
 const SECTION_ORDER = ["raw", "craftable", "elixir", "mid", "final"];
 
-function renderCard(node, allResults) {
+// ═══════════════════════════════════════════════════════════════════════════
+// Render katmanı — buradan itibaren SADECE sunum/DOM. Yukarıdaki hesap motoru
+// (computeAll, computeFocusSet, getMasteryBonusPercent, getRngRange,
+// isSimpleAlchemyRecipe) ve localStorage load/save fonksiyonları değişmez.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function sectionLabel(tier, sk) {
   const s = t();
-  const wrap = document.createElement("div");
-  wrap.className = "node" + (focusId === node.id ? " focused" : "");
-  wrap.dataset.item = node.id;
-
-  const row = document.createElement("div");
-  row.className = "node-row";
-
-  const item = getItem(node.id);
-  if (item.icon) {
-    const icon = document.createElement("img");
-    icon.className = "node-icon";
-    icon.src = item.icon;
-    icon.alt = "";
-    icon.loading = "lazy";
-    row.appendChild(icon);
-  }
-
-  const { primary, secondary } = nameFor(node);
-  const nameDiv = document.createElement("div");
-  nameDiv.className = "node-name";
-  nameDiv.innerHTML = `${primary}<span class="en">${secondary}</span>`;
-  row.appendChild(nameDiv);
-
-  if (node.isRaw) {
-    const badge = document.createElement("span");
-    badge.className = "badge raw";
-    badge.textContent = s.rawBadge;
-    row.appendChild(badge);
-  } else {
-    const methodBadge = document.createElement("span");
-    methodBadge.className = "badge method " + (node.masteryApplies ? "method-tool" : "method-simple");
-    methodBadge.textContent = node.masteryApplies ? s.methodTool(skill) : s.methodSimple(skill);
-    row.appendChild(methodBadge);
-
-    if (node.batches) {
-      const badge = document.createElement("span");
-      badge.className = "badge";
-      badge.textContent = skill === "alchemy" && mastery > 0 && node.hasYieldBonus
-        ? s.batchesBadgeMastery(node.batches, node.producedQty)
-        : s.batchesBadge(node.batches, node.producedQty);
-      row.appendChild(badge);
-    }
-  }
-
-  const qtyInfo = document.createElement("div");
-  qtyInfo.className = "qty-info";
-  const missingSpan = node.missing > 0
-    ? `<span class="missing">${s.missing(node.missing)}</span>`
-    : `<span class="satisfied">${s.sufficient}</span>`;
-  qtyInfo.innerHTML = `<span>${s.totalRequired}: <b>${node.required}</b></span>${missingSpan}`;
-  row.appendChild(qtyInfo);
-
-  const stockWrap = document.createElement("div");
-  stockWrap.className = "stock-input";
-  const label = document.createElement("label");
-  label.textContent = s.inStock;
-  const input = document.createElement("input");
-  input.type = "number";
-  input.min = "0";
-  input.step = "1";
-  input.dataset.item = node.id;
-  input.value = stock[node.id] || 0;
-  input.className = "stock-field";
-  stockWrap.appendChild(label);
-  stockWrap.appendChild(input);
-  row.appendChild(stockWrap);
-
-  if (node.isElixir) {
-    const higherWrap = document.createElement("div");
-    higherWrap.className = "stock-input stock-input-higher";
-    const higherLabel = document.createElement("label");
-    higherLabel.textContent = s.inStockHigher;
-    higherLabel.title = s.higherGradeHint(HIGHER_GRADE_RATIO);
-    const higherInput = document.createElement("input");
-    higherInput.type = "number";
-    higherInput.min = "0";
-    higherInput.step = "1";
-    higherInput.dataset.item = node.id;
-    higherInput.value = stockHigh[node.id] || 0;
-    higherInput.className = "stock-field-higher";
-    higherInput.title = s.higherGradeHint(HIGHER_GRADE_RATIO);
-    higherWrap.appendChild(higherLabel);
-    higherWrap.appendChild(higherInput);
-    row.appendChild(higherWrap);
-  }
-
-  wrap.appendChild(row);
-
-  if (item.recipe && item.recipe.ingredients.length > 0 && node.batches > 0) {
-    const ingredientsWrap = document.createElement("div");
-    ingredientsWrap.className = "ingredients-list";
-    const ingredientsLabel = document.createElement("div");
-    ingredientsLabel.className = "note-text ingredients-label";
-    ingredientsLabel.textContent = `🧪 ${s.ingredientsLabel}`;
-    ingredientsWrap.appendChild(ingredientsLabel);
-
-    item.recipe.ingredients.forEach((ing) => {
-      const ingResult = allResults[ing.item];
-      const ingName = ingResult ? nameFor(ingResult).primary : nameFor(getItem(ing.item)).primary;
-      const neededHere = node.batches * ing.qty;
-      // Bu satırdaki eksik, SADECE bu üretimin kendi ihtiyacına göre (bu
-      // malzemenin elimdeki stoğuna kıyasla) hesaplanır — malzemenin ağaçtaki
-      // başka dallardan gelen toplam ihtiyacı değil, "bu üretim için" eksik.
-      const ingHave = ingResult ? ingResult.have : 0;
-      const ingMissing = Math.max(0, neededHere - ingHave);
-      const line = document.createElement("div");
-      line.className = "ingredient-line" + (ingMissing > 0 ? " missing" : " satisfied");
-      line.textContent = s.ingredientLine(ingName, ing.qty, neededHere, ingMissing);
-      ingredientsWrap.appendChild(line);
-    });
-
-    wrap.appendChild(ingredientsWrap);
-  }
-
-  if (node.usedBy && node.usedBy.length > 0) {
-    const usedByNames = node.usedBy
-      .map((pid) => (allResults[pid] ? nameFor(allResults[pid]).primary : pid))
-      .join(", ");
-    const usedByDiv = document.createElement("div");
-    usedByDiv.className = "note-text";
-    usedByDiv.textContent = `🔗 ${s.usedIn} ${usedByNames}`;
-    wrap.appendChild(usedByDiv);
-  }
-
-  const source = lang === "tr" ? node.source_tr : node.source_en;
-  const note = lang === "tr" ? node.note_tr : node.note_en;
-  if (source) {
-    const src = document.createElement("div");
-    src.className = "note-text";
-    src.textContent = `📍 ${source}`;
-    wrap.appendChild(src);
-  }
-  if (note) {
-    const noteDiv = document.createElement("div");
-    noteDiv.className = "note-text";
-    noteDiv.textContent = `ℹ ${note}`;
-    wrap.appendChild(noteDiv);
-  }
-
-  if (!node.isRaw && !node.masteryApplies && skill === "alchemy" && mastery > 0) {
-    const masteryNote = document.createElement("div");
-    masteryNote.className = "note-text";
-    masteryNote.textContent = `⚠ ${s.simpleAlchemyNote}`;
-    wrap.appendChild(masteryNote);
-  }
-
-  return wrap;
+  return tier === "craftable" ? s.craftableLabelFor(sk) : (s.sections[tier] || tier);
 }
 
-function render() {
+function shortenSource(text) {
+  if (!text) return "";
+  const priceMatch = text.match(/([\d.,]+)\s*(?:gümüş|silver)/i);
+  const firstClause = text.split(/[.;]/)[0].split(",")[0].trim();
+  if (priceMatch) return `${firstClause} · ${priceMatch[1]} ${t().silverUnit}`;
+  return firstClause;
+}
+
+function looksPurchased(text) {
+  return /satın|gümüş|npc|pazar|silver|market/i.test(text || "");
+}
+
+// Huni görünümündeki satırın ikinci (meta) satırı: üretilebilir maddede
+// üretim/verim özeti, ham maddede kaynak ya da "X gerekli [· Y elimde]".
+function computeRowMeta(node) {
+  const s = t();
+  if (node.isRaw) {
+    const source = lang === "tr" ? node.source_tr : node.source_en;
+    if (source && looksPurchased(source)) return shortenSource(source);
+    const { secondary } = nameFor(node);
+    let m = secondary ? `${secondary} · ${s.reqShort(node.required)}` : s.reqShort(node.required);
+    if (node.have > 0) m += ` · ${s.haveShort(node.have)}`;
+    return m;
+  }
+  if (node.batches > 0) {
+    return (skill === "alchemy" && mastery > 0 && node.hasYieldBonus)
+      ? s.batchesBadgeMastery(node.batches, node.producedQty)
+      : s.batchesBadge(node.batches, node.producedQty);
+  }
+  return node.masteryApplies ? s.methodTool(skill) : s.methodSimple(skill);
+}
+
+// ── Render modeli: saf veri, DOM'a dokunmaz ────────────────────────────────
+
+function computeRenderModel() {
   const itemSelect = document.getElementById("itemSelect");
   const targetQty = parseInt(document.getElementById("targetQty").value, 10) || 0;
   const selectedId = itemSelect.value;
-
-  const tree = document.getElementById("tree");
-  const main = document.querySelector("main");
-  tree.innerHTML = "";
-  if (!selectedId || targetQty <= 0) {
-    main.classList.remove("has-results");
-    return;
-  }
+  if (!selectedId || targetQty <= 0) return null;
 
   const masteryPct = skill === "alchemy" ? getMasteryBonusPercent(mastery) : 0;
   const results = computeAll(selectedId, targetQty, masteryPct);
 
-  const s = t();
-
-  // Odak zincirinde artık bu ağaçta bulunmayan (hedef/meslek değişti) maddeler varsa temizle.
   focusChain = focusChain.filter((id) => results[id]);
   focusId = focusChain.length ? focusChain[focusChain.length - 1] : null;
 
   // Odak zincirindeki her adım, bir öncekinin kendi gerekli miktarını kök
-  // alarak yeniden hesaplanır — böylece "önce sadece Elixir of Wind
-  // üreteceğim, sonra onun Wise Man's Blood ihtiyacı ne" gibi art arda
-  // daraltmalar, aynı hammaddeyi kullanan alakasız başka dallardan
-  // etkilenmeyen bir cevap verir. Zincirin İLK maddesinin üstündeki (ata)
-  // maddeler ise hâlâ tüm projenin gerçek toplamını gösterir.
+  // alarak yeniden hesaplanır — böylece art arda daraltmalar, aynı
+  // hammaddeyi kullanan alakasız başka dallardan etkilenmeyen bir cevap verir.
   let focusSet = null;
   const levelResultsList = [];
   if (focusChain.length) {
@@ -695,8 +688,6 @@ function render() {
       prevResults = lvl;
     });
   }
-  // Odaktaki en derin maddenin kendi kapsamındaki malzemeleri: bir sonraki
-  // tıklamada "bu da mevcut odağın altında mı" kontrolü için saklanır.
   lastFocusDeepestIds = levelResultsList.length
     ? new Set(Object.keys(levelResultsList[levelResultsList.length - 1]))
     : new Set();
@@ -716,16 +707,6 @@ function render() {
     ])
     : null;
 
-  const bySection = {};
-  Object.keys(results).forEach((id) => {
-    const node = resultsMapFor(id)[id];
-    const sec = sectionOf(node);
-    if (!bySection[sec]) bySection[sec] = [];
-    bySection[sec].push(node);
-  });
-
-  updateFocusChip();
-
   const query = funnelQuery.trim().toLocaleLowerCase(lang);
   function matchesQuery(node) {
     if (!query) return true;
@@ -734,66 +715,569 @@ function render() {
       (secondary && secondary.toLocaleLowerCase(lang).includes(query));
   }
 
-  const filteredSections = {};
-  SECTION_ORDER.forEach((sec) => {
-    const items = (bySection[sec] || []).filter((node) =>
-      (!displayIds || displayIds.has(node.id)) && matchesQuery(node)
-    );
-    if (items.length > 0) filteredSections[sec] = items;
+  const bySection = {};
+  const allNodes = [];
+  Object.keys(results).forEach((id) => {
+    const node = resultsMapFor(id)[id];
+    allNodes.push(node);
+    const sec = sectionOf(node);
+    if (!bySection[sec]) bySection[sec] = [];
+    bySection[sec].push(node);
   });
 
-  const activeSections = SECTION_ORDER.filter((sec) => filteredSections[sec]);
-  main.classList.toggle("has-results", Object.values(bySection).some((arr) => arr.length > 0));
+  const baseVisible = (nodes) => nodes.filter((n) =>
+    (!displayIds || displayIds.has(n.id)) && (!onlyMissing || n.missing > 0));
 
-  if (activeSections.length === 0) {
+  let baseCount = 0;
+  let matchedCount = 0;
+  const sections = SECTION_ORDER.map((tier) => {
+    const base = baseVisible(bySection[tier] || []);
+    baseCount += base.length;
+    const nodes = base.filter(matchesQuery)
+      .sort((a, b) => nameFor(a).primary.localeCompare(nameFor(b).primary, lang));
+    matchedCount += nodes.length;
+    return { tier, nodes };
+  }).filter((s) => s.nodes.length > 0);
+
+  const hiddenByQuery = query ? Math.max(0, baseCount - matchedCount) : 0;
+
+  const doneCount = Object.values(results).filter((n) => n.missing === 0).length;
+  const totalCount = Object.keys(results).length;
+
+  return {
+    results, resultsMapFor, sections, query, hiddenByQuery,
+    selectedId, targetQty, masteryPct,
+    rootNode: results[selectedId],
+    doneCount, totalCount,
+    progressPct: totalCount ? Math.round((doneCount / totalCount) * 100) : 0
+  };
+}
+
+// ── Satır DOM inşası (huni + tablo ortak parçaları) ────────────────────────
+
+function buildStepper(node, isHigher) {
+  const wrap = document.createElement("div");
+  wrap.className = "stepper" + (isHigher ? " higher" : "");
+  const minus = document.createElement("button");
+  minus.type = "button";
+  minus.textContent = "−";
+  minus.dataset.dir = "-1";
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = "0";
+  input.step = "1";
+  input.dataset.item = node.id;
+  input.className = isHigher ? "stock-field-higher" : "stock-field";
+  input.value = isHigher ? (stockHigh[node.id] || 0) : (stock[node.id] || 0);
+  input.title = isHigher ? `${t().inStockHigher} (${t().higherGradeHint(HIGHER_GRADE_RATIO)})` : t().inStock;
+  const plus = document.createElement("button");
+  plus.type = "button";
+  plus.textContent = "+";
+  plus.dataset.dir = "1";
+  wrap.appendChild(minus);
+  wrap.appendChild(input);
+  wrap.appendChild(plus);
+  return wrap;
+}
+
+function buildDetailPanel(node, allResults) {
+  const s = t();
+  const item = getItem(node.id);
+  const wrap = document.createElement("div");
+  wrap.className = "row-detail";
+
+  if (item.recipe && item.recipe.ingredients.length > 0 && node.batches > 0) {
+    const label = document.createElement("div");
+    label.className = "rd-title";
+    label.textContent = s.ingredientsLabel;
+    wrap.appendChild(label);
+    item.recipe.ingredients.forEach((ing) => {
+      const ingResult = allResults[ing.item];
+      const ingName = ingResult ? nameFor(ingResult).primary : nameFor(getItem(ing.item)).primary;
+      const neededHere = node.batches * ing.qty;
+      const ingHave = ingResult ? ingResult.have : 0;
+      const ingMissing = Math.max(0, neededHere - ingHave);
+      const line = document.createElement("div");
+      line.className = "rd-line " + (ingMissing > 0 ? "miss" : "ok");
+      line.textContent = s.ingredientLine(ingName, ing.qty, neededHere, ingMissing);
+      wrap.appendChild(line);
+    });
+  }
+
+  if (node.usedBy && node.usedBy.length > 0) {
+    const usedByNames = node.usedBy
+      .map((pid) => (allResults[pid] ? nameFor(allResults[pid]).primary : pid))
+      .join(", ");
+    const div = document.createElement("div");
+    div.className = "rd-line";
+    div.textContent = `${s.usedIn} ${usedByNames}`;
+    wrap.appendChild(div);
+  }
+
+  const source = lang === "tr" ? node.source_tr : node.source_en;
+  const note = lang === "tr" ? node.note_tr : node.note_en;
+  if (source) {
+    const div = document.createElement("div");
+    div.className = "rd-line";
+    div.textContent = source;
+    wrap.appendChild(div);
+  }
+  if (note) {
+    const div = document.createElement("div");
+    div.className = "rd-line";
+    div.textContent = note;
+    wrap.appendChild(div);
+  }
+  if (!node.isRaw && !node.masteryApplies && skill === "alchemy" && mastery > 0) {
+    const div = document.createElement("div");
+    div.className = "rd-line miss";
+    div.textContent = s.simpleAlchemyNote;
+    wrap.appendChild(div);
+  }
+
+  if (!wrap.childElementCount) {
+    const div = document.createElement("div");
+    div.className = "rd-line";
+    div.textContent = "—";
+    wrap.appendChild(div);
+  }
+
+  return wrap;
+}
+
+function highlightMatch(text, query) {
+  if (!query) return document.createTextNode(text);
+  const idx = text.toLocaleLowerCase(lang).indexOf(query);
+  if (idx === -1) return document.createTextNode(text);
+  const frag = document.createDocumentFragment();
+  frag.appendChild(document.createTextNode(text.slice(0, idx)));
+  const mark = document.createElement("mark");
+  mark.textContent = text.slice(idx, idx + query.length);
+  frag.appendChild(mark);
+  frag.appendChild(document.createTextNode(text.slice(idx + query.length)));
+  return frag;
+}
+
+function buildFunnelRow(node, allResults, query) {
+  const s = t();
+  const item = getItem(node.id);
+  const row = document.createElement("div");
+  row.className = "row" + (focusId === node.id ? " focused" : "");
+  row.dataset.item = node.id;
+
+  const hit = document.createElement("div");
+  hit.className = "row-hit";
+  hit.setAttribute("role", "button");
+  hit.tabIndex = 0;
+  if (item.icon) {
+    const icon = document.createElement("img");
+    icon.className = "row-icon";
+    icon.src = item.icon;
+    icon.alt = "";
+    icon.loading = "lazy";
+    hit.appendChild(icon);
+  }
+  const text = document.createElement("div");
+  text.className = "row-text";
+  const nameEl = document.createElement("div");
+  nameEl.className = "row-name";
+  const { primary } = nameFor(node);
+  nameEl.appendChild(highlightMatch(primary, query));
+  const metaEl = document.createElement("div");
+  metaEl.className = "row-meta";
+  metaEl.textContent = computeRowMeta(node);
+  text.appendChild(nameEl);
+  text.appendChild(metaEl);
+  hit.appendChild(text);
+  row.appendChild(hit);
+
+  const status = document.createElement("span");
+  status.className = "row-status " + (node.missing > 0 ? "miss" : "ok");
+  status.textContent = node.missing > 0 ? String(node.missing) : "✓";
+  row.appendChild(status);
+
+  if (!node.isRaw) {
+    row.appendChild(buildStepper(node, false));
+    if (node.isElixir) row.appendChild(buildStepper(node, true));
+  } else {
+    row.appendChild(buildStepper(node, false));
+  }
+
+  const expandBtn = document.createElement("button");
+  expandBtn.type = "button";
+  expandBtn.className = "row-expand";
+  expandBtn.textContent = expandedIds.has(node.id) ? "▴" : "▾";
+  row.appendChild(expandBtn);
+
+  const wrapper = document.createDocumentFragment();
+  wrapper.appendChild(row);
+  if (expandedIds.has(node.id)) {
+    wrapper.appendChild(buildDetailPanel(node, allResults));
+  }
+  return wrapper;
+}
+
+// ── Huni görünümü ───────────────────────────────────────────────────────
+
+function paintFunnel(model) {
+  const view = document.getElementById("funnelView");
+  view.innerHTML = "";
+  const s = t();
+
+  if (!model.sections.length) {
     const noResults = document.createElement("div");
     noResults.className = "no-results";
     noResults.textContent = s.noResults;
-    tree.appendChild(noResults);
+    view.appendChild(noResults);
     return;
   }
 
-  activeSections.forEach((sec, idx) => {
-    const items = filteredSections[sec];
+  model.sections.forEach(({ tier, nodes }) => {
+    const col = document.createElement("div");
+    col.className = "col";
+    const head = document.createElement("div");
+    head.className = "col-head";
+    const title = document.createElement("span");
+    title.className = "col-title";
+    title.textContent = sectionLabel(tier, skill);
+    const count = document.createElement("span");
+    count.className = "col-count";
+    count.textContent = String(nodes.length);
+    head.appendChild(title);
+    head.appendChild(count);
+    col.appendChild(head);
 
-    const section = document.createElement("section");
-    section.className = "tier-section";
-
-    const heading = document.createElement("h2");
-    heading.textContent = sec === "craftable" ? s.craftableLabelFor(skill) : (s.sections[sec] || sec);
-    section.appendChild(heading);
-
-    const cardsWrap = document.createElement("div");
-    cardsWrap.className = "tier-cards";
-
-    items
-      .sort((a, b) => nameFor(a).primary.localeCompare(nameFor(b).primary, lang))
-      .forEach((node) => {
-        cardsWrap.appendChild(renderCard(node, resultsMapFor(node.id)));
-      });
-
-    section.appendChild(cardsWrap);
-    tree.appendChild(section);
-
-    if (idx < activeSections.length - 1) {
-      const arrow = document.createElement("div");
-      arrow.className = "funnel-arrow";
-      arrow.textContent = "→";
-      arrow.setAttribute("aria-hidden", "true");
-      tree.appendChild(arrow);
-    }
+    const rows = document.createElement("div");
+    rows.className = "col-rows";
+    nodes.forEach((node) => {
+      rows.appendChild(buildFunnelRow(node, model.resultsMapFor(node.id), model.query));
+    });
+    col.appendChild(rows);
+    view.appendChild(col);
   });
+
+  if (model.hiddenByQuery > 0) {
+    const footer = document.createElement("div");
+    footer.className = "no-results-footer";
+    const link = document.createElement("a");
+    link.href = "#";
+    link.textContent = s.showAll;
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      setSearch("");
+    });
+    footer.textContent = s.noResultsFooter(model.hiddenByQuery);
+    footer.appendChild(link);
+    view.appendChild(footer);
+  }
 }
 
-// Ağaçtan bağımsız, o an seçili mesleğin (Simya/Aşçılık) TÜM maddelerini
-// (ham madde + üretilebilen her şey) tek bir compact listede gösterir —
-// belirli bir hedefe bağlı olmadan hızlıca toplu stok girmek için.
-function renderStockPanel() {
+// ── Tablo görünümü ──────────────────────────────────────────────────────
+
+let tableTierFilter = "all";
+
+function buildTableRow(node, allResults, query) {
   const s = t();
-  const listEl = document.getElementById("stockPanelList");
+  const item = getItem(node.id);
+  const row = document.createElement("div");
+  row.className = "table-row" + (focusId === node.id ? " focused" : "");
+  row.dataset.item = node.id;
+
+  const nameCell = document.createElement("span");
+  nameCell.className = "td-name row-hit";
+  nameCell.setAttribute("role", "button");
+  nameCell.tabIndex = 0;
+  if (item.icon) {
+    const icon = document.createElement("img");
+    icon.className = "row-icon";
+    icon.src = item.icon;
+    icon.alt = "";
+    icon.loading = "lazy";
+    nameCell.appendChild(icon);
+  }
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "row-name";
+  const { primary, secondary } = nameFor(node);
+  nameSpan.appendChild(highlightMatch(primary, query));
+  nameCell.appendChild(nameSpan);
+  if (secondary) {
+    const enSpan = document.createElement("span");
+    enSpan.className = "row-meta";
+    enSpan.style.marginLeft = "6px";
+    enSpan.textContent = secondary;
+    nameCell.appendChild(enSpan);
+  }
+  row.appendChild(nameCell);
+
+  const tierCell = document.createElement("span");
+  tierCell.className = "td-tier";
+  tierCell.textContent = sectionLabel(sectionOf(node), skill);
+  row.appendChild(tierCell);
+
+  const reqCell = document.createElement("span");
+  reqCell.className = "td-req";
+  reqCell.textContent = String(node.required);
+  row.appendChild(reqCell);
+
+  const haveCell = document.createElement("span");
+  haveCell.className = "td-have";
+  const haveInput = document.createElement("input");
+  haveInput.type = "number";
+  haveInput.min = "0";
+  haveInput.dataset.item = node.id;
+  haveInput.className = "stock-field";
+  haveInput.value = stock[node.id] || 0;
+  haveCell.appendChild(haveInput);
+  row.appendChild(haveCell);
+
+  const missCell = document.createElement("span");
+  missCell.className = "td-miss";
+  missCell.style.color = node.missing > 0 ? "var(--color-accent)" : "var(--color-dim-2)";
+  missCell.textContent = node.missing > 0 ? String(node.missing) : "✓";
+  row.appendChild(missCell);
+
+  const craftCell = document.createElement("span");
+  craftCell.className = "td-craft";
+  craftCell.textContent = node.isRaw ? "—" : computeRowMeta(node);
+  row.appendChild(craftCell);
+
+  const pctCell = document.createElement("span");
+  pctCell.className = "td-pct";
+  const pct = node.required > 0 ? Math.min(100, Math.round((node.have / node.required) * 100)) : 100;
+  const track = document.createElement("span");
+  track.className = "pct-track";
+  const fill = document.createElement("span");
+  fill.className = "pct-fill";
+  fill.style.width = pct + "%";
+  track.appendChild(fill);
+  const pctText = document.createElement("span");
+  pctText.className = "pct-text";
+  pctText.textContent = "%" + pct;
+  pctCell.appendChild(track);
+  pctCell.appendChild(pctText);
+  row.appendChild(pctCell);
+
+  return row;
+}
+
+function paintTable(model) {
+  const s = t();
+  const head = document.getElementById("tableHead");
+  head.innerHTML = "";
+  [
+    ["th-name", s.colName], ["th-tier", s.colTier], ["th-req", s.colReq],
+    ["th-have", s.colHave], ["th-miss", s.colMiss], ["th-craft", s.colCraft], ["th-pct", s.colProgress]
+  ].forEach(([cls, text]) => {
+    const span = document.createElement("span");
+    span.className = cls;
+    span.textContent = text;
+    head.appendChild(span);
+  });
+
+  const tierFilterEl = document.getElementById("tierFilter");
+  tierFilterEl.innerHTML = "";
+  const allBtn = document.createElement("button");
+  allBtn.type = "button";
+  allBtn.className = "seg-opt" + (tableTierFilter === "all" ? " active" : "");
+  allBtn.textContent = s.tierFilterAll;
+  allBtn.dataset.tier = "all";
+  tierFilterEl.appendChild(allBtn);
+  SECTION_ORDER.forEach((tier) => {
+    if (!model.sections.some((sec) => sec.tier === tier)) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "seg-opt" + (tableTierFilter === tier ? " active" : "");
+    btn.textContent = sectionLabel(tier, skill);
+    btn.dataset.tier = tier;
+    tierFilterEl.appendChild(btn);
+  });
+
+  const rowsEl = document.getElementById("tableRows");
+  rowsEl.innerHTML = "";
+  let nodes = model.sections
+    .filter((sec) => tableTierFilter === "all" || sec.tier === tableTierFilter)
+    .flatMap((sec) => sec.nodes);
+  nodes = nodes.slice().sort((a, b) => b.missing - a.missing);
+
+  const footer = document.getElementById("tableFooter");
+  if (!nodes.length) {
+    const noResults = document.createElement("div");
+    noResults.className = "no-results";
+    noResults.textContent = s.noResults;
+    rowsEl.appendChild(noResults);
+    footer.hidden = true;
+  } else {
+    nodes.forEach((node) => {
+      rowsEl.appendChild(buildTableRow(node, model.resultsMapFor(node.id), model.query));
+    });
+    if (model.hiddenByQuery > 0) {
+      footer.hidden = false;
+      footer.innerHTML = "";
+      footer.appendChild(document.createTextNode(s.noResultsFooter(model.hiddenByQuery)));
+      const link = document.createElement("a");
+      link.href = "#";
+      link.textContent = s.showAll;
+      link.addEventListener("click", (e) => { e.preventDefault(); setSearch(""); });
+      footer.appendChild(link);
+    } else {
+      footer.hidden = true;
+    }
+  }
+}
+
+// ── Odak breadcrumb ─────────────────────────────────────────────────────
+
+function paintFocusBar(model) {
+  const bar = document.getElementById("focusBar");
+  bar.innerHTML = "";
+  if (!focusChain.length) {
+    bar.hidden = true;
+    return;
+  }
+  const s = t();
+  bar.hidden = false;
+
+  const label = document.createElement("span");
+  label.className = "fb-label";
+  label.textContent = s.focusLabel;
+  bar.appendChild(label);
+
+  focusChain.forEach((id, i) => {
+    if (i > 0) {
+      const sep = document.createElement("span");
+      sep.className = "fb-sep";
+      sep.textContent = "›";
+      bar.appendChild(sep);
+    }
+    const crumb = document.createElement("button");
+    crumb.type = "button";
+    crumb.className = "fb-crumb" + (i === focusChain.length - 1 ? " active" : "");
+    crumb.dataset.level = i;
+    crumb.textContent = nameFor(getItem(id)).primary;
+    bar.appendChild(crumb);
+  });
+
+  const rootReq = model.results[focusChain[0]] ? model.results[focusChain[0]].required : 0;
+  const scope = document.createElement("span");
+  scope.className = "fb-scope";
+  scope.textContent = s.focusScope(rootReq);
+  bar.appendChild(scope);
+
+  bar.appendChild(document.createElement("span")).style.flex = "1";
+
+  const clearBtn = document.createElement("button");
+  clearBtn.type = "button";
+  clearBtn.className = "btn btn-ghost";
+  clearBtn.id = "focusClearBtn";
+  clearBtn.textContent = s.clearFocus;
+  bar.appendChild(clearBtn);
+}
+
+// ── Hedef özeti (targetBar) ─────────────────────────────────────────────
+
+function paintTargetBar(model) {
+  const s = t();
+  const tag = document.getElementById("skillTag");
+  tag.textContent = s.skillTagLabel[skill];
+  tag.className = "tb-skill-tag" + (skill === "cooking" ? " cooking" : "");
+
+  const iconEl = document.getElementById("tsIcon");
+  const titleEl = document.getElementById("tsTitle");
+  const metaEl = document.getElementById("tsMeta");
+  const progressWrap = document.getElementById("tbProgress");
+
+  if (!model) {
+    iconEl.hidden = true;
+    titleEl.textContent = s.noTarget;
+    metaEl.textContent = "";
+    progressWrap.hidden = true;
+    return;
+  }
+
+  const item = getItem(model.selectedId);
+  if (item.icon) {
+    iconEl.src = item.icon;
+    iconEl.hidden = false;
+  } else {
+    iconEl.hidden = true;
+  }
+  const { primary, secondary } = nameFor(item);
+  titleEl.textContent = `${primary} × ${model.targetQty}`;
+  const masteryHint = skill === "alchemy" ? updateMasteryHintText() : "";
+  metaEl.textContent = [secondary, skill === "alchemy" ? `Mastery ${mastery}${masteryHint ? " (" + masteryHint + ")" : ""}` : null]
+    .filter(Boolean).join(" · ");
+
+  progressWrap.hidden = false;
+  document.getElementById("progLabel").textContent = s.progressLabel;
+  document.getElementById("progPct").textContent = "%" + model.progressPct;
+  document.getElementById("progFill").style.width = model.progressPct + "%";
+  document.getElementById("progSub").textContent = s.progressSub(model.doneCount, model.totalCount);
+}
+
+// ── Ana repaint orkestrasyonu ───────────────────────────────────────────
+
+function repaint() {
+  if (activeScreen === "gather") {
+    paintGather();
+    return;
+  }
+  document.getElementById("gatherView").hidden = true;
+  const model = computeRenderModel();
+  paintTargetBar(model);
+  document.getElementById("funnelView").hidden = view !== "funnel";
+  document.getElementById("tableView").hidden = view !== "table";
+  if (!model) {
+    document.getElementById("funnelView").innerHTML = "";
+    document.getElementById("tableRows").innerHTML = "";
+    paintFocusBar({ results: {} });
+    return;
+  }
+  paintFocusBar(model);
+  if (view === "funnel") paintFunnel(model);
+  else paintTable(model);
+  if (drawerOpen) paintDrawer();
+}
+
+function setSearch(value) {
+  funnelQuery = value;
+  const input = document.getElementById("globalSearch");
+  if (input.value !== value) input.value = value;
+  document.getElementById("searchBox").classList.toggle("active", !!value);
+  if (drawerOpen) paintDrawer();
+  else repaint();
+}
+
+// ── Toplu stok çekmecesi ────────────────────────────────────────────────
+
+function buildDrawerRow(id, item) {
+  const { primary, secondary } = nameFor(item);
+  const row = document.createElement("div");
+  row.className = "drawer-row";
+  if (item.icon) {
+    const icon = document.createElement("img");
+    icon.className = "row-icon";
+    icon.src = item.icon;
+    icon.alt = "";
+    icon.loading = "lazy";
+    row.appendChild(icon);
+  }
+  const name = document.createElement("span");
+  name.className = "row-name";
+  name.textContent = secondary ? `${primary} · ${secondary}` : primary;
+  row.appendChild(name);
+  row.appendChild(buildStepper({ id, isElixir: false }, false));
+  if (item.tier === "elixir") {
+    row.appendChild(buildStepper({ id, isElixir: true }, true));
+  }
+  return row;
+}
+
+function paintDrawer() {
+  const s = t();
+  const listEl = document.getElementById("stockDrawerList");
   listEl.innerHTML = "";
 
-  const query = stockPanelQuery.trim().toLocaleLowerCase(lang);
+  const query = funnelQuery.trim().toLocaleLowerCase(lang);
   const byTier = {};
   Object.entries(RECIPES.items).forEach(([id, item]) => {
     if ((item.skill || "alchemy") !== skill) return;
@@ -808,8 +1292,7 @@ function renderStockPanel() {
   });
 
   const activeTiers = SECTION_ORDER.filter((tier) => byTier[tier] && byTier[tier].length);
-
-  if (activeTiers.length === 0) {
+  if (!activeTiers.length) {
     const noResults = document.createElement("div");
     noResults.className = "no-results";
     noResults.textContent = s.noResults;
@@ -819,67 +1302,199 @@ function renderStockPanel() {
 
   activeTiers.forEach((tier) => {
     const group = document.createElement("div");
-    group.className = "stock-panel-group";
-    const heading = document.createElement("h2");
-    heading.textContent = tier === "craftable" ? s.craftableLabelFor(skill) : (s.sections[tier] || tier);
-    group.appendChild(heading);
-
-    const grid = document.createElement("div");
-    grid.className = "stock-panel-grid";
-
+    group.className = "drawer-group";
+    const h3 = document.createElement("h3");
+    h3.textContent = sectionLabel(tier, skill);
+    group.appendChild(h3);
     byTier[tier]
       .sort((a, b) => nameFor(a.item).primary.localeCompare(nameFor(b.item).primary, lang))
-      .forEach(({ id, item }) => {
-        grid.appendChild(renderStockPanelRow(id, item));
-      });
-
-    group.appendChild(grid);
+      .forEach(({ id, item }) => group.appendChild(buildDrawerRow(id, item)));
     listEl.appendChild(group);
   });
 }
 
-function renderStockPanelRow(id, item) {
-  const { primary, secondary } = nameFor(item);
-  const row = document.createElement("div");
-  row.className = "stock-panel-row";
-
-  if (item.icon) {
-    const icon = document.createElement("img");
-    icon.className = "node-icon";
-    icon.src = item.icon;
-    icon.alt = "";
-    icon.loading = "lazy";
-    row.appendChild(icon);
-  }
-
-  const nameDiv = document.createElement("div");
-  nameDiv.className = "stock-panel-row-name";
-  nameDiv.innerHTML = secondary ? `${primary} <span class="en">· ${secondary}</span>` : primary;
-  row.appendChild(nameDiv);
-
-  const input = document.createElement("input");
-  input.type = "number";
-  input.min = "0";
-  input.step = "1";
-  input.dataset.item = id;
-  input.value = stock[id] || 0;
-  input.className = "stock-field";
-  row.appendChild(input);
-
-  if (item.tier === "elixir") {
-    const higherInput = document.createElement("input");
-    higherInput.type = "number";
-    higherInput.min = "0";
-    higherInput.step = "1";
-    higherInput.dataset.item = id;
-    higherInput.value = stockHigh[id] || 0;
-    higherInput.className = "stock-field-higher";
-    higherInput.title = t().higherGradeHint(HIGHER_GRADE_RATIO);
-    row.appendChild(higherInput);
-  }
-
-  return row;
+function openDrawer() {
+  drawerOpen = true;
+  document.getElementById("stockDrawer").hidden = false;
+  const backdrop = document.getElementById("drawerBackdrop");
+  // Backdrop sadece komuta çubuğunun ALTINDAKİ alanı kaplar, böylece paylaşılan
+  // arama kutusu (shell içinde) çekmece açıkken de tıklanabilir/odaklanabilir kalır.
+  backdrop.style.top = document.getElementById("shell").getBoundingClientRect().bottom + "px";
+  backdrop.hidden = false;
+  document.getElementById("drawerTitle").textContent = t().drawerTitle;
+  document.getElementById("globalSearch").placeholder = t().drawerSearchPlaceholder;
+  paintDrawer();
 }
+
+function closeDrawer() {
+  drawerOpen = false;
+  document.getElementById("stockDrawer").hidden = true;
+  document.getElementById("drawerBackdrop").hidden = true;
+  document.getElementById("globalSearch").placeholder = t().searchPlaceholderGlobal;
+  setSearch("");
+}
+
+// ── Toplama listesi ekranı ──────────────────────────────────────────────
+
+function parseSilverPrice(text) {
+  if (!text) return null;
+  const m = text.match(/([\d.,]+)\s*(?:gümüş|silver)/i);
+  if (!m) return null;
+  const n = parseFloat(m[1].replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+function paintGather() {
+  const s = t();
+  document.getElementById("funnelView").hidden = true;
+  document.getElementById("tableView").hidden = true;
+  const gv = document.getElementById("gatherView");
+  gv.hidden = false;
+  gv.innerHTML = "";
+
+  const model = computeRenderModel();
+  paintTargetBar(model);
+  document.getElementById("focusBar").hidden = true;
+
+  const head = document.createElement("div");
+  head.className = "gv-head";
+  const titleWrap = document.createElement("div");
+  titleWrap.style.flex = "1";
+  const title = document.createElement("div");
+  title.className = "gv-title";
+  title.textContent = s.gatherTitle;
+  const sub = document.createElement("div");
+  sub.className = "gv-sub";
+  titleWrap.appendChild(title);
+  titleWrap.appendChild(sub);
+  head.appendChild(titleWrap);
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.className = "btn";
+  copyBtn.textContent = s.copyBtn;
+  head.appendChild(copyBtn);
+  const backBtn = document.createElement("button");
+  backBtn.type = "button";
+  backBtn.className = "btn btn-dark";
+  backBtn.textContent = s.backBtn;
+  backBtn.addEventListener("click", () => { activeScreen = "main"; repaint(); });
+  head.appendChild(backBtn);
+  gv.appendChild(head);
+
+  if (!model) {
+    sub.textContent = "";
+    return;
+  }
+  const { primary } = nameFor(getItem(model.selectedId));
+  const raws = Object.values(model.results).filter((n) => n.isRaw && n.missing > 0);
+  sub.textContent = s.gatherSubFor(primary, model.targetQty, raws.length);
+
+  const groups = [
+    { key: "gather", title: s.groupGather, nodes: raws.filter((n) => !looksPurchased(lang === "tr" ? n.source_tr : n.source_en)) },
+    { key: "buy", title: s.groupBuy, nodes: raws.filter((n) => looksPurchased(lang === "tr" ? n.source_tr : n.source_en)) }
+  ].filter((g) => g.nodes.length);
+
+  let totalCost = 0;
+  const copyLines = [];
+
+  groups.forEach((g) => {
+    const gh = document.createElement("div");
+    gh.className = "gv-group-head";
+    const gt = document.createElement("span");
+    gt.className = "g-title";
+    gt.textContent = g.title;
+    const gm = document.createElement("span");
+    gm.className = "g-meta";
+    gm.textContent = s.itemsCount(g.nodes.length);
+    gh.appendChild(gt);
+    gh.appendChild(gm);
+    gv.appendChild(gh);
+
+    g.nodes.forEach((node) => {
+      const item = getItem(node.id);
+      const done = checkedIds.has(node.id);
+      const row = document.createElement("div");
+      row.className = "gv-row";
+      row.dataset.item = node.id;
+
+      const check = document.createElement("button");
+      check.type = "button";
+      check.className = "gv-check" + (done ? " checked" : "");
+      check.textContent = done ? "✓" : "";
+      row.appendChild(check);
+
+      if (item.icon) {
+        const icon = document.createElement("img");
+        icon.className = "row-icon";
+        icon.src = item.icon;
+        icon.alt = "";
+        row.appendChild(icon);
+      }
+
+      const textWrap = document.createElement("div");
+      textWrap.className = "gv-row-text";
+      const nameEl = document.createElement("div");
+      nameEl.className = "gv-row-name" + (done ? " done" : "");
+      nameEl.textContent = nameFor(node).primary;
+      const srcEl = document.createElement("div");
+      srcEl.className = "gv-row-src";
+      srcEl.textContent = (lang === "tr" ? node.source_tr : node.source_en) || "";
+      textWrap.appendChild(nameEl);
+      textWrap.appendChild(srcEl);
+      row.appendChild(textWrap);
+
+      const qtyWrap = document.createElement("div");
+      qtyWrap.className = "gv-row-qty";
+      const big = document.createElement("div");
+      big.className = "q-big";
+      big.style.color = done ? "var(--color-dim-2)" : "var(--color-accent)";
+      big.textContent = done ? "✓" : String(node.missing);
+      const of = document.createElement("div");
+      of.className = "q-of";
+      of.textContent = `${node.have} / ${node.required}`;
+      qtyWrap.appendChild(big);
+      qtyWrap.appendChild(of);
+      row.appendChild(qtyWrap);
+
+      gv.appendChild(row);
+
+      const price = parseSilverPrice(lang === "tr" ? node.source_tr : node.source_en);
+      if (price && !done) totalCost += price * node.missing;
+
+      copyLines.push(`${done ? "[x]" : "[ ]"} ${nameFor(node).primary} — ${node.missing}/${node.required}`);
+    });
+  });
+
+  copyBtn.addEventListener("click", () => {
+    const text = copyLines.join("\n");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
+  });
+
+  if (totalCost > 0) {
+    const costRow = document.createElement("div");
+    costRow.className = "gv-cost";
+    const label = document.createElement("span");
+    label.className = "gc-label";
+    label.textContent = s.costLabel;
+    const value = document.createElement("span");
+    value.className = "gc-value";
+    value.textContent = `${Math.round(totalCost).toLocaleString(lang === "tr" ? "tr-TR" : "en-US")} ${s.silverUnit}`;
+    costRow.appendChild(label);
+    costRow.appendChild(value);
+    gv.appendChild(costRow);
+  }
+
+  if (!groups.length) {
+    const noResults = document.createElement("div");
+    noResults.className = "no-results";
+    noResults.textContent = s.noResults;
+    gv.appendChild(noResults);
+  }
+}
+
+// ── Hedef seçici (populate/filter) ──────────────────────────────────────
 
 function populateSelect(preserveSelection) {
   const itemSelect = document.getElementById("itemSelect");
@@ -895,12 +1510,11 @@ function populateSelect(preserveSelection) {
     byTier[tier].push({ id, item });
   });
 
-  const s = t();
   ["final", "mid", "elixir", "craftable"].forEach((tier) => {
     const group = byTier[tier];
     if (!group || group.length === 0) return;
     const optgroup = document.createElement("optgroup");
-    optgroup.label = tier === "craftable" ? s.craftableLabelFor(skill) : (s.sections[tier] || tier);
+    optgroup.label = sectionLabel(tier, skill);
     group
       .sort((a, b) => nameFor(a.item).primary.localeCompare(nameFor(b.item).primary, lang))
       .forEach(({ id, item }) => {
@@ -937,28 +1551,34 @@ function filterSelectOptions(query) {
   }
 }
 
+// ── Statik metinler / dil-meslek uygulaması ─────────────────────────────
+
 function applyStaticText() {
   const s = t();
   const subtitle = s.subtitleFor(skill);
-  document.getElementById("pageTitle").textContent = s.title;
-  document.getElementById("pageSubtitle").textContent = subtitle;
+  document.title = `${s.title} — ${subtitle}`;
+  document.documentElement.lang = lang;
+
   document.getElementById("skillLabel").textContent = s.skillLabel;
   document.getElementById("whatToMakeLabel").textContent = s.whatToMake;
   document.getElementById("itemSearch").placeholder = s.searchPlaceholder;
-  document.getElementById("funnelSearch").placeholder = s.funnelSearchPlaceholder;
   document.getElementById("howManyLabel").textContent = s.howMany;
   document.getElementById("masteryLabel").textContent = s.masteryLabel;
   document.getElementById("masteryGroup").style.display = skill === "alchemy" ? "" : "none";
-  updateMasteryHint();
+  document.getElementById("targetEditorClose").textContent = s.calcBtn;
+
+  document.getElementById("globalSearch").placeholder = drawerOpen ? s.drawerSearchPlaceholder : s.searchPlaceholderGlobal;
+  document.querySelector('[data-view="funnel"]').textContent = s.viewFunnel;
+  document.querySelector('[data-view="table"]').textContent = s.viewTable;
+  document.getElementById("onlyMissingBtn").textContent = s.onlyMissingBtn;
+  document.getElementById("gatherBtn").textContent = s.gatherBtn;
+  document.getElementById("stockDrawerBtn").textContent = s.stockDrawerBtn;
   document.getElementById("resetStockBtn").textContent = s.resetStock;
-  document.getElementById("stockPanelToggle").textContent = stockPanelOpen ? s.stockPanelHide : s.stockPanelShow;
-  document.getElementById("stockPanelSearch").placeholder = s.stockPanelSearchPlaceholder;
+
   document.getElementById("legendMissing").textContent = s.legendMissing;
   document.getElementById("legendOk").textContent = s.legendOk;
   document.getElementById("legendRaw").textContent = s.legendRaw;
   document.getElementById("footerText").innerHTML = s.footer;
-  document.documentElement.lang = lang;
-  document.title = `${s.title} — ${subtitle}`;
 
   document.querySelectorAll(".lang-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.lang === lang);
@@ -967,49 +1587,17 @@ function applyStaticText() {
     btn.textContent = s.skillNames[btn.dataset.skill] || btn.dataset.skill;
     btn.classList.toggle("active", btn.dataset.skill === skill);
   });
-}
-
-function updateFocusChip() {
-  const chip = document.getElementById("focusChip");
-  chip.innerHTML = "";
-  if (!focusChain.length) {
-    chip.hidden = true;
-    return;
-  }
-  const s = t();
-  chip.hidden = false;
-
-  const label = document.createElement("span");
-  label.className = "focus-chip-label";
-  label.textContent = s.focusLabel;
-  chip.appendChild(label);
-
-  focusChain.forEach((id, i) => {
-    if (i > 0) {
-      const sep = document.createElement("span");
-      sep.className = "focus-chip-sep";
-      sep.textContent = "›";
-      chip.appendChild(sep);
-    }
-    const crumb = document.createElement("button");
-    crumb.type = "button";
-    crumb.className = "focus-chip-crumb";
-    crumb.dataset.level = i;
-    crumb.textContent = nameFor(getItem(id)).primary;
-    chip.appendChild(crumb);
+  document.querySelectorAll('[data-view]').forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.view === view);
   });
-
-  const clearBtn = document.createElement("button");
-  clearBtn.type = "button";
-  clearBtn.className = "focus-chip-clear";
-  clearBtn.textContent = s.clearFocus;
-  chip.appendChild(clearBtn);
 }
 
-function updateMasteryHint() {
+function updateMasteryHintText() {
   const s = t();
   const pct = Math.round(getMasteryBonusPercent(mastery) * 10) / 10;
-  document.getElementById("masteryHint").textContent = s.masteryHint(pct);
+  const text = s.masteryHint(pct);
+  document.getElementById("masteryHint").textContent = text;
+  return text;
 }
 
 function setLang(newLang) {
@@ -1019,8 +1607,7 @@ function setLang(newLang) {
   applyStaticText();
   populateSelect(true);
   document.getElementById("itemSearch").value = "";
-  render();
-  if (stockPanelOpen) renderStockPanel();
+  repaint();
 }
 
 function setSkill(newSkill) {
@@ -1031,155 +1618,270 @@ function setSkill(newSkill) {
   populateSelect(false);
   document.getElementById("itemSearch").value = "";
   focusChain = [];
-  funnelQuery = "";
-  document.getElementById("funnelSearch").value = "";
-  render();
-  if (stockPanelOpen) renderStockPanel();
+  setSearch("");
+  tableTierFilter = "all";
+  repaint();
 }
+
+function openTargetEditor() {
+  targetEditorOpen = true;
+  document.getElementById("targetEditor").hidden = false;
+}
+
+function closeTargetEditor() {
+  targetEditorOpen = false;
+  document.getElementById("targetEditor").hidden = true;
+}
+
+// ── Stok değişimi: debounce'lu commit, in-place repaint ─────────────────
+
+function setStockValue(id, isHigher, value) {
+  const val = Math.max(0, value | 0);
+  if (isHigher) stockHigh[id] = val;
+  else stock[id] = val;
+  scheduleStockCommit();
+}
+
+function scheduleStockCommit() {
+  if (stockCommitTimer) clearTimeout(stockCommitTimer);
+  stockCommitTimer = setTimeout(() => {
+    stockCommitTimer = null;
+    saveStock();
+    saveStockHigh();
+    requestAnimationFrame(repaint);
+  }, 150);
+}
+
+function handleStockInput(e) {
+  const isBase = e.target.classList.contains("stock-field");
+  const isHigher = e.target.classList.contains("stock-field-higher");
+  if (!isBase && !isHigher) return;
+  const id = e.target.dataset.item;
+  const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+  if (isHigher) stockHigh[id] = val;
+  else stock[id] = val;
+  scheduleStockCommit();
+}
+
+function handleStepperClick(e) {
+  const btn = e.target.closest(".stepper button");
+  if (!btn) return;
+  const stepper = btn.closest(".stepper");
+  const input = stepper.querySelector("input");
+  const id = input.dataset.item;
+  const isHigher = input.classList.contains("stock-field-higher");
+  const magnitude = e.shiftKey ? 10 : (e.altKey ? 100 : 1);
+  const dir = parseInt(btn.dataset.dir, 10);
+  const current = isHigher ? (stockHigh[id] || 0) : (stock[id] || 0);
+  const next = Math.max(0, current + dir * magnitude);
+  input.value = next;
+  setStockValue(id, isHigher, next);
+}
+
+// ── Odaklanma / genişletme tıklama mantığı ──────────────────────────────
+
+function handleRowClick(e, container) {
+  if (e.target.closest(".stepper")) { handleStepperClick(e); return; }
+
+  const expandBtn = e.target.closest(".row-expand");
+  if (expandBtn) {
+    const row = expandBtn.closest(".row, .table-row");
+    const id = row.dataset.item;
+    if (expandedIds.has(id)) expandedIds.delete(id);
+    else expandedIds.add(id);
+    saveExpanded();
+    repaint();
+    return;
+  }
+
+  const hit = e.target.closest(".row-hit");
+  if (!hit) return;
+  const row = hit.closest(".row, .table-row");
+  if (!row) return;
+  const id = row.dataset.item;
+
+  // Odaklanınca ağaç aramasını temizle: aksi halde arama metniyle eşleşmeyen
+  // ata/alt maddeler (odağın "geçmişi") gizli kalmaya devam eder.
+  setSearch("");
+
+  const idx = focusChain.indexOf(id);
+  if (idx !== -1) {
+    // Zincirde zaten var. En derindeki (o an odaklı) maddeyse tıklamak bir
+    // "seçimi kaldır" hareketi: bir kademe geri döner (tek maddeyse odağı
+    // tamamen kapatır). Ara bir kademeyse breadcrumb'daki aynı maddeye
+    // tıklamakla birebir aynıdır: doğrudan o kademeye atlar.
+    focusChain = idx === focusChain.length - 1 ? focusChain.slice(0, idx) : focusChain.slice(0, idx + 1);
+  } else if (focusChain.length > 0 && lastFocusDeepestIds.has(id)) {
+    // Mevcut odağın KENDİ kapsamındaki bir malzeme: kapsamı daha da daralt.
+    focusChain.push(id);
+  } else {
+    // Alakasız ya da üst bir madde: odağı bu maddeyle sıfırdan başlat.
+    focusChain = [id];
+  }
+  repaint();
+}
+
+// ── init ──────────────────────────────────────────────────────────────
 
 function init() {
   document.getElementById("masteryInput").value = mastery;
   document.getElementById("targetQty").value = loadTargetQty();
   applyStaticText();
   populateSelect(false);
+  updateMasteryHintText();
 
   document.getElementById("itemSelect").addEventListener("change", (e) => {
     saveSelectedItem(skill, e.target.value);
     focusChain = [];
-    funnelQuery = "";
-    document.getElementById("funnelSearch").value = "";
-    render();
+    setSearch("");
+    repaint();
   });
   document.getElementById("targetQty").addEventListener("input", (e) => {
     const qty = parseInt(e.target.value, 10);
     if (Number.isFinite(qty) && qty > 0) saveTargetQty(qty);
-    render();
+    repaint();
   });
   document.getElementById("itemSearch").addEventListener("input", (e) => {
     filterSelectOptions(e.target.value);
-    render();
-  });
-  document.getElementById("funnelSearch").addEventListener("input", (e) => {
-    funnelQuery = e.target.value;
-    render();
-  });
-  document.getElementById("focusChip").addEventListener("click", (e) => {
-    const clearBtn = e.target.closest(".focus-chip-clear");
-    if (clearBtn) {
-      focusChain = [];
-      render();
-      return;
-    }
-    const crumb = e.target.closest(".focus-chip-crumb");
-    if (crumb) {
-      const level = parseInt(crumb.dataset.level, 10);
-      focusChain = focusChain.slice(0, level + 1);
-      funnelQuery = "";
-      document.getElementById("funnelSearch").value = "";
-      render();
-    }
-  });
-  document.getElementById("tree").addEventListener("click", (e) => {
-    if (e.target.closest(".stock-input")) return;
-    const card = e.target.closest(".node");
-    if (!card) return;
-    const id = card.dataset.item;
-
-    // Odaklanınca ağaç aramasını temizle: aksi halde arama metniyle
-    // eşleşmeyen ata/alt maddeler (odağın "geçmişi") gizli kalmaya devam eder.
-    funnelQuery = "";
-    document.getElementById("funnelSearch").value = "";
-
-    const idx = focusChain.indexOf(id);
-    if (idx !== -1) {
-      // Zincirde zaten var. En derindeki (o an odaklı) maddeyse tıklamak bir
-      // "seçimi kaldır" hareketi: bir kademe geri döner (tek maddeyse odağı
-      // tamamen kapatır). Ara bir kademeyse breadcrumb'daki aynı maddeye
-      // tıklamakla birebir aynıdır: doğrudan o kademeye atlar.
-      focusChain = idx === focusChain.length - 1
-        ? focusChain.slice(0, idx)
-        : focusChain.slice(0, idx + 1);
-    } else if (focusChain.length > 0 && lastFocusDeepestIds.has(id)) {
-      // Mevcut odağın KENDİ kapsamındaki bir malzeme: kapsamı daha da daralt.
-      focusChain.push(id);
-    } else {
-      // Alakasız ya da üst bir madde: odağı bu maddeyle sıfırdan başlat.
-      focusChain = [id];
-    }
-    render();
   });
   document.getElementById("masteryInput").addEventListener("input", (e) => {
     mastery = Math.max(0, Math.min(3000, parseInt(e.target.value, 10) || 0));
     saveMastery();
-    updateMasteryHint();
-    render();
+    updateMasteryHintText();
+    repaint();
   });
 
   document.querySelectorAll(".lang-btn").forEach((btn) => {
     btn.addEventListener("click", () => setLang(btn.dataset.lang));
   });
-
   document.querySelectorAll(".skill-btn").forEach((btn) => {
     btn.addEventListener("click", () => setSkill(btn.dataset.skill));
   });
+  document.getElementById("skillTag").addEventListener("click", () => {
+    setSkill(skill === "alchemy" ? "cooking" : "alchemy");
+  });
 
-  document.getElementById("tree").addEventListener("input", (e) => handleStockFieldInput(e, render));
-  document.getElementById("stockPanelList").addEventListener("input", (e) => handleStockFieldInput(e, renderStockPanel));
+  document.getElementById("targetSummary").addEventListener("click", () => {
+    targetEditorOpen ? closeTargetEditor() : openTargetEditor();
+  });
+  document.getElementById("targetEditorClose").addEventListener("click", () => {
+    closeTargetEditor();
+    repaint();
+  });
+
+  document.getElementById("globalSearch").addEventListener("input", (e) => {
+    setSearch(e.target.value);
+  });
+  document.getElementById("searchClear").addEventListener("click", () => {
+    setSearch("");
+    document.getElementById("globalSearch").blur();
+  });
+
+  document.querySelectorAll('[data-view]').forEach((btn) => {
+    btn.addEventListener("click", () => {
+      view = btn.dataset.view;
+      saveView();
+      document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle("active", b === btn));
+      repaint();
+    });
+  });
+
+  document.getElementById("onlyMissingBtn").addEventListener("click", (e) => {
+    onlyMissing = !onlyMissing;
+    e.currentTarget.classList.toggle("btn-primary", onlyMissing);
+    repaint();
+  });
+
+  document.getElementById("gatherBtn").addEventListener("click", () => {
+    activeScreen = activeScreen === "gather" ? "main" : "gather";
+    repaint();
+  });
+
+  document.getElementById("stockDrawerBtn").addEventListener("click", openDrawer);
+  document.getElementById("drawerClose").addEventListener("click", closeDrawer);
+  document.getElementById("drawerBackdrop").addEventListener("click", closeDrawer);
+  document.getElementById("stockDrawerList").addEventListener("input", handleStockInput);
+  document.getElementById("stockDrawerList").addEventListener("click", (e) => handleStepperClick(e));
 
   document.getElementById("resetStockBtn").addEventListener("click", () => {
     stock = {};
     stockHigh = {};
     saveStock();
     saveStockHigh();
-    render();
-    if (stockPanelOpen) renderStockPanel();
+    repaint();
   });
 
-  document.getElementById("stockPanelToggle").addEventListener("click", () => {
-    stockPanelOpen = !stockPanelOpen;
-    document.getElementById("tree").hidden = stockPanelOpen;
-    document.getElementById("stockPanel").hidden = !stockPanelOpen;
-    document.getElementById("stockPanelToggle").textContent = stockPanelOpen ? t().stockPanelHide : t().stockPanelShow;
-    if (stockPanelOpen) renderStockPanel();
+  document.getElementById("focusBar").addEventListener("click", (e) => {
+    if (e.target.id === "focusClearBtn" || e.target.closest("#focusClearBtn")) {
+      focusChain = [];
+      repaint();
+      return;
+    }
+    const crumb = e.target.closest(".fb-crumb");
+    if (crumb) {
+      const level = parseInt(crumb.dataset.level, 10);
+      focusChain = focusChain.slice(0, level + 1);
+      setSearch("");
+      repaint();
+    }
   });
 
-  document.getElementById("stockPanelSearch").addEventListener("input", (e) => {
-    stockPanelQuery = e.target.value;
-    renderStockPanel();
+  document.getElementById("funnelView").addEventListener("click", (e) => handleRowClick(e, "funnel"));
+  document.getElementById("funnelView").addEventListener("input", handleStockInput);
+  document.getElementById("tableRows").addEventListener("click", (e) => handleRowClick(e, "table"));
+  document.getElementById("tableRows").addEventListener("input", handleStockInput);
+  document.getElementById("tierFilter").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-tier]");
+    if (!btn) return;
+    tableTierFilter = btn.dataset.tier;
+    repaint();
+  });
+  document.getElementById("gatherView").addEventListener("click", (e) => {
+    const check = e.target.closest(".gv-check");
+    if (!check) return;
+    const row = check.closest(".gv-row");
+    const id = row.dataset.item;
+    const model = computeRenderModel();
+    if (!model) return;
+    if (checkedIds.has(id)) {
+      checkedIds.delete(id);
+    } else {
+      checkedIds.add(id);
+      const node = model.results[id];
+      if (node) {
+        stock[id] = node.required;
+        saveStock();
+      }
+    }
+    saveChecked();
+    paintGather();
   });
 
-  render();
-}
+  // Klavye kısayolları: "/" arama kutusuna odaklan, Esc temizle+bırak,
+  // Enter ilk sonuca odaklan.
+  document.addEventListener("keydown", (e) => {
+    const active = document.activeElement;
+    const inField = active && /^(INPUT|SELECT|TEXTAREA)$/.test(active.tagName);
+    if (e.key === "/" && !inField) {
+      e.preventDefault();
+      document.getElementById("globalSearch").focus();
+    } else if (e.key === "Escape" && active && active.id === "globalSearch") {
+      setSearch("");
+      active.blur();
+    } else if (e.key === "Enter" && active && active.id === "globalSearch") {
+      const model = computeRenderModel();
+      if (model && model.query) {
+        const firstMatch = model.sections.flatMap((s) => s.nodes)[0];
+        if (firstMatch) {
+          focusChain = [firstMatch.id];
+          setSearch("");
+          repaint();
+        }
+      }
+    }
+  });
 
-// Bir stok input'undaki (temel ya da üst kalite) değişikliği işler; hem
-// ağaçtaki hem de toplu stok panelindeki alanlar için ortak kullanılır.
-function handleStockFieldInput(e, rerender) {
-  const isBase = e.target.classList.contains("stock-field");
-  const isHigher = e.target.classList.contains("stock-field-higher");
-  if (!isBase && !isHigher) return;
-
-  const id = e.target.dataset.item;
-  const cls = isBase ? "stock-field" : "stock-field-higher";
-  const selStart = e.target.selectionStart;
-  const scrollY = window.scrollY;
-  const val = Math.max(0, parseInt(e.target.value, 10) || 0);
-  if (isBase) {
-    stock[id] = val;
-    saveStock();
-  } else {
-    stockHigh[id] = val;
-    saveStockHigh();
-  }
-  rerender();
-
-  // Tüm liste yeniden çizildiği için düzenlenmekte olan input'un
-  // focus/cursor/scroll konumunu geri yüklüyoruz.
-  const restored = document.querySelector(`input.${cls}[data-item="${CSS.escape(id)}"]`);
-  if (restored) {
-    restored.focus();
-    try { restored.setSelectionRange(selStart, selStart); } catch (err) { /* no-op */ }
-  }
-  window.scrollTo(0, scrollY);
+  repaint();
 }
 
 document.addEventListener("DOMContentLoaded", init);

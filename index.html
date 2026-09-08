@@ -7,60 +7,111 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="lang-toggle" role="group" aria-label="Language / Dil">
-    <button type="button" class="lang-btn" data-lang="tr">TR</button>
-    <button type="button" class="lang-btn" data-lang="en">EN</button>
+<header id="shell">
+  <div id="targetBar">
+    <div class="tb-brand">
+      <span class="tb-brand-name">BDO HELPER</span>
+      <button type="button" class="tb-skill-tag" id="skillTag" data-skill="alchemy"></button>
+    </div>
+    <button type="button" class="tb-summary" id="targetSummary">
+      <img id="tsIcon" class="tb-summary-icon" alt="" hidden>
+      <span class="tb-summary-text">
+        <span class="tb-summary-title" id="tsTitle"></span>
+        <span class="tb-summary-meta" id="tsMeta"></span>
+      </span>
+    </button>
+    <div class="tb-progress" id="tbProgress" hidden>
+      <div class="tb-progress-head"><span id="progLabel">İLERLEME</span><span id="progPct">%0</span></div>
+      <div class="tb-progress-track"><div class="tb-progress-fill" id="progFill" style="width:0%"></div></div>
+      <div class="tb-progress-sub" id="progSub"></div>
+    </div>
+    <div class="tb-lang" role="group" aria-label="Language / Dil">
+      <button type="button" class="lang-btn" data-lang="tr">TR</button>
+      <button type="button" class="lang-btn" data-lang="en">EN</button>
+    </div>
   </div>
-  <h1 id="pageTitle">BDO Helper</h1>
-  <p class="subtitle" id="pageSubtitle">Simya (Alchemy) ham madde hesaplayıcısı</p>
+
+  <section id="targetEditor" hidden>
+    <div class="te-row">
+      <div class="field" style="flex:1 1 320px;max-width:480px">
+        <label id="whatToMakeLabel">Ne üretmek istiyorsun?</label>
+        <div class="te-search">
+          <input type="text" id="itemSearch" placeholder="Ürün ara...">
+        </div>
+        <select id="itemSelect" class="input"></select>
+      </div>
+      <div class="field">
+        <label id="skillLabel">Meslek</label>
+        <div class="seg" role="group" aria-label="Skill / Meslek">
+          <button type="button" class="seg-opt skill-btn" data-skill="alchemy">Simya</button>
+          <button type="button" class="seg-opt skill-btn" data-skill="cooking">Aşçılık</button>
+        </div>
+      </div>
+      <div class="field">
+        <label id="howManyLabel">Adet</label>
+        <input type="number" id="targetQty" class="input" min="1" step="1" value="10" style="width:100px">
+      </div>
+      <div class="field" id="masteryGroup">
+        <label id="masteryLabel">Simya Mastery</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="number" id="masteryInput" class="input" min="0" max="3000" step="1" value="0" style="width:100px">
+          <span class="mastery-hint" id="masteryHint"></span>
+        </div>
+      </div>
+      <button type="button" class="btn btn-primary" id="targetEditorClose">HESAPLA</button>
+    </div>
+  </section>
+
+  <div id="commandBar">
+    <div class="search-box" id="searchBox">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="globalSearch" placeholder="Malzeme veya ürün ara — / ile odaklan">
+      <span class="search-count" id="searchCount" hidden></span>
+      <button type="button" class="search-clear" id="searchClear" hidden>✕</button>
+    </div>
+    <div class="seg" id="viewSwitch">
+      <button type="button" class="seg-opt" data-view="funnel">HUNİ</button>
+      <button type="button" class="seg-opt" data-view="table">TABLO</button>
+    </div>
+    <button type="button" class="btn" id="onlyMissingBtn">SADECE EKSİKLER</button>
+    <span class="spacer"></span>
+    <button type="button" class="btn" id="gatherBtn">TOPLAMA LİSTESİ</button>
+    <button type="button" class="btn" id="stockDrawerBtn">STOK GİR</button>
+    <button type="button" class="btn" id="resetStockBtn">SIFIRLA</button>
+  </div>
+
+  <div id="focusBar" hidden></div>
 </header>
 
 <main>
-  <section class="controls" aria-label="Hesaplama ayarları">
-    <div class="control-group">
-      <label id="skillLabel">Meslek</label>
-      <div class="skill-toggle" role="group" aria-label="Skill / Meslek">
-        <button type="button" class="skill-btn" data-skill="alchemy">Simya</button>
-        <button type="button" class="skill-btn" data-skill="cooking">Aşçılık</button>
-      </div>
-    </div>
-    <div class="control-group control-group-wide">
-      <label for="itemSelect" id="whatToMakeLabel">Ne üretmek istiyorsun?</label>
-      <input type="text" id="itemSearch" placeholder="Ürün ara...">
-      <select id="itemSelect"></select>
-    </div>
-    <div class="control-group">
-      <label for="targetQty" id="howManyLabel">Kaç adet üretmek istiyorsun?</label>
-      <input type="number" id="targetQty" min="1" step="1" value="10">
-    </div>
-    <div class="control-group" id="masteryGroup">
-      <label for="masteryInput" id="masteryLabel">Simya Mastery</label>
-      <input type="number" id="masteryInput" min="0" max="3000" step="1" value="0">
-      <span class="mastery-hint" id="masteryHint"></span>
-    </div>
-    <button id="stockPanelToggle" class="secondary-btn" type="button">Stok Gir</button>
-    <button id="resetStockBtn" class="secondary-btn" type="button">Tüm stokları sıfırla</button>
-  </section>
-
   <section class="legend">
-    <span class="legend-item"><span class="dot need"></span> <span id="legendMissing">Eksik / toplaman gereken</span></span>
-    <span class="legend-item"><span class="dot ok"></span> <span id="legendOk">Elindeki stok yeterli</span></span>
-    <span class="legend-item"><span class="dot raw"></span> <span id="legendRaw">Ham madde (üretilmez, toplanır/satın alınır)</span></span>
+    <span class="legend-item"><span id="legendMissing">Eksik / toplaman gereken — kırmızı sayı</span></span>
+    <span class="legend-item"><span id="legendOk">Elindeki stok yeterli — ✓</span></span>
+    <span class="legend-item"><span id="legendRaw">Ham madde — üretilmez, toplanır/satın alınır</span></span>
   </section>
 
-  <section class="funnel-toolbar" aria-label="Ağaçta arama / odaklama">
-    <input type="text" id="funnelSearch" placeholder="Ağaçta ara...">
-    <div id="focusChip" class="focus-chip" hidden></div>
+  <section id="funnelView" class="view" aria-label="İhtiyaç ağacı"></section>
+
+  <section id="tableView" hidden>
+    <div class="tv-toolbar">
+      <div class="seg" id="tierFilter"></div>
+    </div>
+    <div class="table-head" id="tableHead"></div>
+    <div id="tableRows"></div>
+    <div class="no-results-footer" id="tableFooter" hidden></div>
   </section>
 
-  <section id="tree" class="tree" aria-label="İhtiyaç ağacı"></section>
-
-  <section id="stockPanel" class="stock-panel" aria-label="Toplu stok girişi" hidden>
-    <input type="text" id="stockPanelSearch" placeholder="Malzeme ara...">
-    <div id="stockPanelList" class="stock-panel-list"></div>
-  </section>
+  <section id="gatherView" hidden></section>
 </main>
+
+<div id="drawerBackdrop" hidden></div>
+<aside id="stockDrawer" hidden aria-label="Toplu stok girişi">
+  <div class="drawer-head">
+    <span class="dh-title" id="drawerTitle">Toplu Stok Girişi</span>
+    <button type="button" id="drawerClose">✕</button>
+  </div>
+  <div id="stockDrawerList"></div>
+</aside>
 
 <footer>
   <p id="footerText">Veriler <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a> kaynak alınarak hazırlanmıştır. Oyun içi güncellemelerle miktarlar değişebilir.</p>
