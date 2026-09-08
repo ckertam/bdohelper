@@ -756,28 +756,18 @@ function computeRenderModel() {
 // ── Satır DOM inşası (huni + tablo ortak parçaları) ────────────────────────
 
 function buildStepper(node, isHigher) {
-  const wrap = document.createElement("div");
-  wrap.className = "stepper" + (isHigher ? " higher" : "");
-  const minus = document.createElement("button");
-  minus.type = "button";
-  minus.textContent = "−";
-  minus.dataset.dir = "-1";
+  // Not: "stepper" ismi kalsa da artık +/- düğmesi yok, sadece doğrudan
+  // yazılabilen bir sayı kutusu — büyük miktarlar (yüzlerce/binlerce) için
+  // tek tek tıklamak işlevsiz olduğundan kaldırıldı.
   const input = document.createElement("input");
   input.type = "number";
   input.min = "0";
   input.step = "1";
   input.dataset.item = node.id;
-  input.className = isHigher ? "stock-field-higher" : "stock-field";
+  input.className = "qty-input " + (isHigher ? "stock-field-higher" : "stock-field");
   input.value = isHigher ? (stockHigh[node.id] || 0) : (stock[node.id] || 0);
   input.title = isHigher ? `${t().inStockHigher} (${t().higherGradeHint(HIGHER_GRADE_RATIO)})` : t().inStock;
-  const plus = document.createElement("button");
-  plus.type = "button";
-  plus.textContent = "+";
-  plus.dataset.dir = "1";
-  wrap.appendChild(minus);
-  wrap.appendChild(input);
-  wrap.appendChild(plus);
-  return wrap;
+  return input;
 }
 
 function buildDetailPanel(node, allResults) {
@@ -881,11 +871,15 @@ function buildFunnelRow(node, allResults, query) {
   text.className = "row-text";
   const nameEl = document.createElement("div");
   nameEl.className = "row-name";
-  const { primary } = nameFor(node);
+  const { primary, secondary } = nameFor(node);
   nameEl.appendChild(highlightMatch(primary, query));
   const metaEl = document.createElement("div");
   metaEl.className = "row-meta";
-  metaEl.textContent = computeRowMeta(node);
+  const metaText = computeRowMeta(node);
+  metaEl.textContent = metaText;
+  // İsim/meta metni dar kolonlarda kesiliyor (ellipsis) — üzerine gelince
+  // tam metni gösteren tooltip.
+  text.title = `${primary}${secondary ? " · " + secondary : ""}\n${metaText}`;
   text.appendChild(nameEl);
   text.appendChild(metaEl);
   hit.appendChild(text);
@@ -999,6 +993,7 @@ function buildTableRow(node, allResults, query) {
   nameSpan.className = "row-name";
   const { primary, secondary } = nameFor(node);
   nameSpan.appendChild(highlightMatch(primary, query));
+  nameCell.title = secondary ? `${primary} · ${secondary}` : primary;
   nameCell.appendChild(nameSpan);
   if (secondary) {
     const enSpan = document.createElement("span");
@@ -1264,6 +1259,7 @@ function buildDrawerRow(id, item) {
   const name = document.createElement("span");
   name.className = "row-name";
   name.textContent = secondary ? `${primary} · ${secondary}` : primary;
+  name.title = name.textContent;
   row.appendChild(name);
   row.appendChild(buildStepper({ id, isElixir: false }, false));
   if (item.tier === "elixir") {
@@ -1635,13 +1631,6 @@ function closeTargetEditor() {
 
 // ── Stok değişimi: debounce'lu commit, in-place repaint ─────────────────
 
-function setStockValue(id, isHigher, value) {
-  const val = Math.max(0, value | 0);
-  if (isHigher) stockHigh[id] = val;
-  else stock[id] = val;
-  scheduleStockCommit();
-}
-
 function scheduleStockCommit() {
   if (stockCommitTimer) clearTimeout(stockCommitTimer);
   stockCommitTimer = setTimeout(() => {
@@ -1663,26 +1652,9 @@ function handleStockInput(e) {
   scheduleStockCommit();
 }
 
-function handleStepperClick(e) {
-  const btn = e.target.closest(".stepper button");
-  if (!btn) return;
-  const stepper = btn.closest(".stepper");
-  const input = stepper.querySelector("input");
-  const id = input.dataset.item;
-  const isHigher = input.classList.contains("stock-field-higher");
-  const magnitude = e.shiftKey ? 10 : (e.altKey ? 100 : 1);
-  const dir = parseInt(btn.dataset.dir, 10);
-  const current = isHigher ? (stockHigh[id] || 0) : (stock[id] || 0);
-  const next = Math.max(0, current + dir * magnitude);
-  input.value = next;
-  setStockValue(id, isHigher, next);
-}
-
 // ── Odaklanma / genişletme tıklama mantığı ──────────────────────────────
 
 function handleRowClick(e, container) {
-  if (e.target.closest(".stepper")) { handleStepperClick(e); return; }
-
   const expandBtn = e.target.closest(".row-expand");
   if (expandBtn) {
     const row = expandBtn.closest(".row, .table-row");
@@ -1801,7 +1773,6 @@ function init() {
   document.getElementById("drawerClose").addEventListener("click", closeDrawer);
   document.getElementById("drawerBackdrop").addEventListener("click", closeDrawer);
   document.getElementById("stockDrawerList").addEventListener("input", handleStockInput);
-  document.getElementById("stockDrawerList").addEventListener("click", (e) => handleStepperClick(e));
 
   document.getElementById("resetStockBtn").addEventListener("click", () => {
     stock = {};

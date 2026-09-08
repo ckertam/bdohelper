@@ -237,16 +237,13 @@ main { padding: 0 0 60px; }
 .row-status.miss { color: var(--color-accent); }
 .row-status.ok { color: var(--color-dim-2); }
 
-.stepper { display: flex; border: 1px solid var(--color-divider); flex: none; }
-.stepper button { border: none; background: transparent; padding: 1px 7px; font: 800 12px var(--font); cursor: pointer; }
-.stepper button:hover { background: var(--color-accent-100); }
-.stepper input {
-  width: 52px; border: none; border-left: 1px solid var(--color-divider); border-right: 1px solid var(--color-divider);
-  text-align: center; font: 600 12px var(--font); padding: 3px 2px; background: var(--color-surface-2);
+.qty-input {
+  width: 56px; flex: none; border: 1px solid var(--color-divider);
+  text-align: center; font: 600 12px var(--font); padding: 4px 2px; background: var(--color-surface-2);
   -moz-appearance: textfield;
 }
-.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.stepper.higher input { color: var(--color-accent-700); }
+.qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.qty-input.stock-field-higher { border-color: var(--color-accent); color: var(--color-accent-700); }
 
 .row-expand { border: none; background: transparent; cursor: pointer; font: 800 11px var(--font); color: var(--color-dim); flex: none; padding: 4px 6px; }
 .row-expand:hover { color: var(--color-text); }
@@ -321,7 +318,7 @@ main { padding: 0 0 60px; }
 .drawer-row { display: flex; align-items: center; gap: 10px; padding: 7px 16px; border-bottom: 1px solid var(--color-divider-soft); }
 .drawer-row .row-icon { width: 20px; height: 20px; }
 .drawer-row .row-name { flex: 1; font: 600 11.5px var(--font); }
-.drawer-row .stepper input { width: 44px; }
+.drawer-row .qty-input { width: 44px; }
 
 /* ── Gathering list ─────────────────────────────────────────────────────── */
 #gatherView .gv-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 2px solid var(--color-text); }
@@ -359,6 +356,6 @@ footer a { color: var(--color-accent); }
   #commandBar { flex-direction: column; align-items: stretch; }
   #commandBar .search-box { max-width: none; order: -1; }
   #commandBar .cb-actions { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
-  .stepper button { min-width: 44px; min-height: 32px; }
+  .qty-input { min-height: 32px; }
   #stockDrawer { width: 100%; max-width: 100%; }
 }
