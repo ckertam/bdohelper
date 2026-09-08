@@ -314,6 +314,21 @@ function isSimpleAlchemyRecipe(item) {
   return item.tier === "mid" || item.tier === "final";
 }
 
+// bdocodex/oyun içi Mastery tablosu aslında bir "üretim miktarı çarpanı"
+// DEĞİL — "+Chance for Max" (o üretimin RNG aralığından MAKSİMUM sonucu
+// alma şansı) ifade eder (bkz. bdocodex "Alchemy Mastery" tablosu / GrumpyG
+// rehberi: "62.50% +Chance for Max"). Bu yüzden sabit/tek çıktılı (RNG
+// aralığı notu olmayan, ör. Sonsuzluk Kristalleri) tariflerde Mastery'nin
+// üretim miktarına hiçbir etkisi yoktur — artıracak bir "maksimum" yoktur.
+// RNG aralıklı (ör. "1-4 adet") tariflerde ise beklenen değer, minimum ile
+// maksimum arasında bu şansa göre enterpole edilir.
+function getRngRange(item) {
+  const note = (item.note_tr || "") + " " + (item.note_en || "");
+  const match = note.match(/(\d+)\s*-\s*(\d+)/);
+  if (!match) return null;
+  return { min: parseInt(match[1], 10), max: parseInt(match[2], 10) };
+}
+
 function getItem(id) {
   const item = RECIPES.items[id];
   if (!item) {
@@ -323,11 +338,11 @@ function getItem(id) {
 }
 
 // Hedeflenen kök madde + miktardan yola çıkarak tüm ağacı hesaplar.
-// masteryPct: Simya Mastery'nin verdiği "Ürün Miktarı Artışı" (%) — her tarifin
-// çıktısına uygulanır (örn. Mastery 2000 -> output_qty * 1.50), böylece yüksek
-// Mastery'de aynı hedefe ulaşmak için daha az üretim/ham madde gerekir.
+// masteryPct: Simya Mastery'nin bdocodex tablosundaki "+Chance for Max"
+// değeri (%) — RNG aralıklı tariflerde o aralığın maksimumunu alma şansı.
+// Sadece BİLGİ amaçlı "çıkar" tahmininde kullanılır; malzeme ihtiyacı
+// (batches) her zaman garanti minimuma göre hesaplanır (bkz. aşağıda).
 function computeAll(rootId, targetQty, masteryPct) {
-  const yieldMultiplier = 1 + (masteryPct || 0) / 100;
   // 1) Ulaşılabilir madde kümesi + her maddenin kaç farklı "üst" madde
   //    tarafından talep edildiğini (inDegree) bul.
   const usedBy = {};
@@ -374,22 +389,26 @@ function computeAll(rootId, targetQty, masteryPct) {
     const required = demand[id];
     const missing = Math.max(0, required - have);
     const masteryApplies = !!item.recipe && !isSimpleAlchemyRecipe(item);
+    const rngRange = item.recipe ? getRngRange(item) : null;
+    const hasYieldBonus = masteryApplies && !!rngRange;
     let batches = 0;
     let producedQty = 0;
 
     if (item.recipe && missing > 0) {
-      // Kimya Aleti ile yapılan (Basit Kimya OLMAYAN) tariflerde Mastery'nin
-      // "Ürün Miktarı Artışı" gerçek bir ORTALAMA verim artışıdır — bu yüzden
-      // kaç kez üretim yapman gerektiği (batches), dolayısıyla alt malzeme
-      // ihtiyacı, bu ortalamaya göre hesaplanır (ör. 2500 Mastery'de her
-      // üretim ortalama %56 daha fazla verince, daha az üretime/hammaddeye
-      // ihtiyaç olur). Basit Kimya tariflerinde Mastery hiç etki etmediği
-      // için orada her zaman temel çıktı kullanılır.
-      const effectiveOutputQty = masteryApplies
-        ? item.recipe.output_qty * yieldMultiplier
+      // Malzeme ihtiyacı HER ZAMAN garanti edilen temel (minimum) çıktıya
+      // göre hesaplanır — Mastery bir ORTALAMA/şansa bağlı bonus olduğu için
+      // buna güvenip alt malzeme ihtiyacını azaltmıyoruz (güvenli/muhafazakar
+      // taraf). "Çıkar" olarak gösterilen sayı ise sadece BİLGİ amaçlıdır:
+      // Mastery, RNG aralıklı (ör. 1-4) tariflerde o aralığın MAKSİMUMUNU
+      // alma şansını artırır ("+Chance for Max" — düz bir çarpan değildir),
+      // bu yüzden beklenen değer min ile max arasında bu şansa göre
+      // enterpole edilir. Sabit/tek çıktılı tariflerde (artıracak bir
+      // "maksimum" olmadığından) Mastery'nin çıktıya hiçbir etkisi yoktur.
+      batches = Math.ceil(missing / item.recipe.output_qty);
+      const expectedOutputQty = hasYieldBonus
+        ? rngRange.min + (masteryPct / 100) * (rngRange.max - rngRange.min)
         : item.recipe.output_qty;
-      batches = Math.ceil(missing / effectiveOutputQty);
-      producedQty = Math.round(batches * effectiveOutputQty);
+      producedQty = Math.round(batches * expectedOutputQty);
     }
 
     result[id] = {
@@ -404,6 +423,7 @@ function computeAll(rootId, targetQty, masteryPct) {
       source_en: item.source_en || null,
       isElixir,
       masteryApplies,
+      hasYieldBonus,
       required,
       have,
       baseHave,
@@ -515,7 +535,7 @@ function renderCard(node, allResults) {
     if (node.batches) {
       const badge = document.createElement("span");
       badge.className = "badge";
-      badge.textContent = skill === "alchemy" && mastery > 0 && node.masteryApplies
+      badge.textContent = skill === "alchemy" && mastery > 0 && node.hasYieldBonus
         ? s.batchesBadgeMastery(node.batches, node.producedQty)
         : s.batchesBadge(node.batches, node.producedQty);
       row.appendChild(badge);
