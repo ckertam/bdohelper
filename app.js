@@ -703,6 +703,7 @@ function render() {
   const displayIds = focusSet
     ? new Set([
       ...[...focusSet.all].filter((id) => !focusSet.down.has(id)),
+      ...focusChain,
       ...lastFocusDeepestIds
     ])
     : null;
@@ -983,10 +984,13 @@ function init() {
 
     const idx = focusChain.indexOf(id);
     if (idx !== -1) {
-      // Zincirde zaten var: o kademeye geri dön (breadcrumb'daki aynı
-      // maddeye tıklamakla birebir aynı davranış). En derindeki maddeyse bu
-      // bir no-op'tur — odağı tamamen kapatmak için ✕ butonu kullanılır.
-      focusChain = focusChain.slice(0, idx + 1);
+      // Zincirde zaten var. En derindeki (o an odaklı) maddeyse tıklamak bir
+      // "seçimi kaldır" hareketi: bir kademe geri döner (tek maddeyse odağı
+      // tamamen kapatır). Ara bir kademeyse breadcrumb'daki aynı maddeye
+      // tıklamakla birebir aynıdır: doğrudan o kademeye atlar.
+      focusChain = idx === focusChain.length - 1
+        ? focusChain.slice(0, idx)
+        : focusChain.slice(0, idx + 1);
     } else if (focusChain.length > 0 && lastFocusDeepestIds.has(id)) {
       // Mevcut odağın KENDİ kapsamındaki bir malzeme: kapsamı daha da daralt.
       focusChain.push(id);
