@@ -233,17 +233,25 @@ main { padding: 0 0 60px; }
 .row-name mark { background: var(--color-accent-200); color: inherit; font-weight: 800; }
 .row-meta { font: 400 10px var(--font); color: var(--color-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.row-status { font: 800 11px var(--font); flex: none; min-width: 20px; text-align: right; }
-.row-status.miss { color: var(--color-accent); }
-.row-status.ok { color: var(--color-dim-2); }
+/* SPEC (1).md §1: her zaman "elimde/gerekli" — yeterliyken de görünür. */
+.row-status {
+  font: 800 11px var(--font); flex: none; min-width: 64px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.row-status .qty-have { color: var(--color-dim-2); }
+.row-status .qty-have.short { color: var(--color-accent); font-weight: 800; }
+.row-status .qty-req { color: var(--color-dim-2); }
+.row-status.ok .qty-have, .row-status.ok .qty-req { color: var(--color-dim-2); }
 
 .qty-input {
   width: 56px; flex: none; border: 1px solid var(--color-divider);
   text-align: center; font: 600 12px var(--font); padding: 4px 2px; background: var(--color-surface-2);
-  -moz-appearance: textfield;
+  -moz-appearance: textfield; font-variant-numeric: tabular-nums;
 }
 .qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .qty-input.stock-field-higher { border-color: var(--color-accent); color: var(--color-accent-700); }
+
+.row-alt-tag { margin: 2px 0; }
 
 .row-expand { border: none; background: transparent; cursor: pointer; font: 800 11px var(--font); color: var(--color-dim); flex: none; padding: 4px 6px; }
 .row-expand:hover { color: var(--color-text); }
@@ -257,9 +265,39 @@ main { padding: 0 0 60px; }
 .row-detail .rd-line.miss { color: var(--color-accent); }
 .row-detail .rd-line.ok { color: var(--color-dim-2); }
 
+/* SPEC (1).md §3: üst kalite girişi — genişletilmiş detayda etiketli çift alan */
+.rd-higher { display: flex; flex-direction: column; gap: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--color-divider-soft); margin-bottom: 2px; }
+.rd-higher-row { display: flex; align-items: center; gap: 8px; }
+.rd-higher-label { font: 800 9px var(--font); letter-spacing: .08em; color: var(--color-dim); text-transform: uppercase; width: 130px; flex: none; }
+.rd-higher-converted { font: 600 11px var(--font); color: var(--color-accent-700); }
+.rd-higher-help { font: 400 10.5px var(--font); color: var(--color-dim); }
+
+/* SPEC (1).md §4c: ikame malzemeler listesi */
+.rd-alt-line { display: flex; align-items: center; gap: 8px; }
+.rd-alt-line .row-icon { width: 16px; height: 16px; }
+.rd-alt-name { flex: 1; font: 600 11px var(--font); color: var(--color-text); }
+.rd-alt-qty { font: 400 10.5px var(--font); color: var(--color-dim); font-variant-numeric: tabular-nums; }
+
 .no-results { color: var(--color-dim); padding: 30px 18px; font-size: 12.5px; }
 .no-results-footer { padding: 10px 18px; font: 400 11.5px var(--font); color: var(--color-dim); border-top: 1px solid var(--color-divider-soft); }
 .no-results-footer a { color: var(--color-accent); }
+
+/* SPEC (1).md §2: iki bloklu sıralama arasındaki katlanır "TAMAMLANDI" ayracı —
+   huni kolonlarında, tabloda ve çekmecede aynı görünür. */
+.block-divider {
+  padding: 8px 14px; font: 800 9.5px var(--font); letter-spacing: .1em;
+  color: var(--color-dim); background: var(--color-surface);
+  border-top: 1px solid var(--color-divider-soft); border-bottom: 1px solid var(--color-divider-soft);
+  cursor: pointer; text-transform: uppercase;
+}
+.block-divider:hover { background: var(--color-accent-100); color: var(--color-text); }
+
+/* Geri al ile değişen satırın 600ms vurgusu (SPEC (1).md §9) */
+@keyframes just-restored-pulse {
+  0% { background: var(--color-accent-200); }
+  100% { background: transparent; }
+}
+.just-restored { animation: just-restored-pulse .6s ease-out; }
 
 /* ── Table view ─────────────────────────────────────────────────────────── */
 #tableView .tv-toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid var(--color-divider); flex-wrap: wrap; }
@@ -273,14 +311,19 @@ main { padding: 0 0 60px; }
 .th-tier, .td-tier { width: 96px; flex: none; }
 .td-tier { font: 800 9.5px var(--font); letter-spacing: .08em; color: var(--color-dim); }
 .th-req, .td-req, .th-have, .td-have, .th-miss, .td-miss { width: 78px; flex: none; text-align: right; }
-.td-req { font-weight: 600; }
+.td-req { font-weight: 600; font-variant-numeric: tabular-nums; }
+.td-req.dim { color: var(--color-dim-2); font-weight: 400; }
 .td-have input { width: 60px; text-align: right; border: 1px solid var(--color-divider); background: var(--color-surface-2); padding: 3px 6px; font: 600 12px var(--font); }
-.td-miss { font-weight: 800; }
+.td-miss { font-weight: 800; font-variant-numeric: tabular-nums; }
 .th-craft, .td-craft { width: 104px; flex: none; text-align: right; color: var(--color-dim); font-size: 11px; }
 .th-pct, .td-pct { width: 120px; flex: none; text-align: right; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
 .pct-track { width: 60px; height: 6px; background: var(--color-divider-soft); display: inline-block; }
 .pct-fill { display: block; height: 100%; background: var(--color-text); }
 .pct-text { font: 800 10.5px var(--font); width: 30px; }
+.th-expand, .td-expand { width: 26px; flex: none; text-align: center; }
+.th-sortable { cursor: pointer; user-select: none; }
+.th-sortable:hover { color: var(--color-text); }
+.th-sortable.active { color: var(--color-text); }
 
 @media (max-width: 900px) {
   .table-head { display: none; }
@@ -319,6 +362,13 @@ main { padding: 0 0 60px; }
 .drawer-row .row-icon { width: 20px; height: 20px; }
 .drawer-row .row-name { flex: 1; font: 600 11.5px var(--font); }
 .drawer-row .qty-input { width: 44px; }
+.drawer-row .row-status { min-width: 58px; font-size: 10px; }
+
+/* SPEC (1).md §6: çekmecenin KENDİ arama kutusu + filtre çipleri */
+.drawer-search-box { margin: 10px 16px 0; max-width: none; flex: none; }
+.drawer-chips { display: flex; gap: 6px; padding: 8px 16px; flex-wrap: wrap; border-bottom: 1px solid var(--color-divider-soft); }
+.drawer-chips .seg-opt { border: 1px solid var(--color-divider); padding: 5px 9px; }
+.drawer-chips .seg-opt.active { background: var(--color-accent); color: var(--color-accent-ink); }
 
 /* ── Gathering list ─────────────────────────────────────────────────────── */
 #gatherView .gv-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 2px solid var(--color-text); }
@@ -345,6 +395,29 @@ main { padding: 0 0 60px; }
 #gatherView .gv-cost { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-top: 2px solid var(--color-text); }
 #gatherView .gv-cost .gc-label { font: 800 11px var(--font); letter-spacing: .1em; }
 #gatherView .gv-cost .gc-value { font: 800 18px var(--font); color: var(--color-accent); }
+.gv-row-price { font: 600 10px var(--font); color: var(--color-accent-700); }
+.gv-group-head.money-toggle { cursor: pointer; }
+.gv-group-head.money-toggle:hover { background: var(--color-accent-100); }
+.gv-price-date { padding: 8px 18px; font: 400 10.5px var(--font); color: var(--color-dim); }
+
+/* ── Geri al şeridi (SPEC (1).md §9) ───────────────────────────────────── */
+.undo-toast {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+  z-index: 30; display: flex; align-items: center; gap: 14px;
+  background: var(--color-text); color: var(--color-bg);
+  padding: 10px 16px; border: 2px solid var(--color-text);
+  font: 600 12px var(--font); max-width: 92vw;
+}
+.undo-toast .ut-msg { font: 800 10.5px var(--font); letter-spacing: .08em; text-transform: uppercase; }
+.undo-toast .ut-goto, .undo-toast .ut-redo {
+  border: none; background: transparent; color: var(--color-accent-600);
+  font: 800 10.5px var(--font); letter-spacing: .06em; cursor: pointer; text-decoration: none;
+}
+.undo-toast .ut-close {
+  border: none; background: transparent; color: var(--color-bg);
+  font: 800 12px var(--font); cursor: pointer; opacity: .7;
+}
+.undo-toast .ut-close:hover { opacity: 1; }
 
 footer {
   text-align: center; padding: 20px; color: var(--color-dim); font-size: 11px;

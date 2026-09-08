@@ -74,6 +74,7 @@
       <button type="button" class="seg-opt" data-view="table">TABLO</button>
     </div>
     <button type="button" class="btn" id="onlyMissingBtn">SADECE EKSİKLER</button>
+    <button type="button" class="btn" id="countMoneyBtn">PARAYLA ÇÖZÜLENLERİ SAY</button>
     <span class="spacer"></span>
     <button type="button" class="btn" id="gatherBtn">TOPLAMA LİSTESİ</button>
     <button type="button" class="btn" id="stockDrawerBtn">STOK GİR</button>
@@ -95,6 +96,7 @@
   <section id="tableView" hidden>
     <div class="tv-toolbar">
       <div class="seg" id="tierFilter"></div>
+      <button type="button" class="btn btn-ghost" id="sortResetBtn" hidden>EKSİKLER ÜSTTE</button>
     </div>
     <div class="table-head" id="tableHead"></div>
     <div id="tableRows"></div>
@@ -110,8 +112,20 @@
     <span class="dh-title" id="drawerTitle">Toplu Stok Girişi</span>
     <button type="button" id="drawerClose">✕</button>
   </div>
+  <div class="search-box drawer-search-box" id="drawerSearchBox">
+    <span class="search-icon">⌕</span>
+    <input type="text" id="drawerSearch" placeholder="Malzeme ara...">
+    <button type="button" class="search-clear" id="drawerSearchClear" hidden>✕</button>
+  </div>
+  <div class="drawer-chips" id="drawerChips">
+    <button type="button" class="seg-opt" data-chip="missing">SADECE EKSİKLER</button>
+    <button type="button" class="seg-opt" data-chip="raw">SADECE HAM</button>
+    <button type="button" class="seg-opt" data-chip="entered">GİRİLENLER</button>
+  </div>
   <div id="stockDrawerList"></div>
 </aside>
+
+<div id="undoToast" class="undo-toast" hidden></div>
 
 <footer>
   <p id="footerText">Veriler <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a> kaynak alınarak hazırlanmıştır. Oyun içi güncellemelerle miktarlar değişebilir.</p>

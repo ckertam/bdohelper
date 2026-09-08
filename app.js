@@ -19,6 +19,11 @@ const TARGET_QTY_KEY = "bdohelper_target_qty_v1";
 const VIEW_KEY = "bdohelper_view_v1";
 const EXPANDED_KEY = "bdohelper_expanded_v1";
 const CHECKED_KEY = "bdohelper_checked_v1";
+const DONE_COLLAPSED_KEY = "bdohelper_done_collapsed_v1";
+const SORT_OVERRIDE_KEY = "bdohelper_sort_v1";
+const UNDO_KEY = "bdohelper_undo_v1";
+const MONEY_COLLAPSED_KEY = "bdohelper_money_collapsed_v1";
+const COUNT_MONEY_KEY = "bdohelper_count_money_v1";
 
 // bdocodex: her iksirin üst kaliteli (Advanced/Endless vb.) versiyonu, tarifte
 // istenen normal (Simple/base) iksir yerine 1:3 oranında kullanılabilir.
@@ -80,6 +85,20 @@ let drawerOpen = false;
 let targetEditorOpen = false;
 let activeScreen = "main"; // "main" (huni/tablo) | "gather"
 let stockCommitTimer = null;
+let doneCollapsed = loadDoneCollapsed(); // "TAMAMLANDI" bölümü katlı mı
+let tableSortOverride = loadSortOverride(); // {col, dir} | null — tablo başlığına tıklayarak özel sıralama
+let moneyCollapsed = loadMoneyCollapsed(); // toplama listesinde "PARAYLA ÇÖZÜLÜR" katlı mı
+let countMoney = loadCountMoney(); // "PARAYLA ÇÖZÜLENLERİ SAY" — kapalıyken unlimited kalemler ilerlemeye katılmaz
+let undoStack = loadUndoStack();
+let redoStack = [];
+let undoToastTimer = null;
+let stockFocusValue = null; // {id, field, from} — bir stok input'una odaklanıldığı andaki değer (blur'da geri al kaydı için)
+let drawerQuery = ""; // çekmecenin KENDİ arama metni (kabuktan bağımsız, SPEC (1).md §6)
+let drawerChip = null; // "missing" | "raw" | "entered" | null
+// Bir önceki render'da her maddenin GERÇEK (donmamış) blok üyeliği ("missing"|"done").
+// Bir stok input'u odaktayken o maddenin blok konumu bu haritadaki değerde donar
+// (yazarken satır sıçramaz), blur'da hemen gerçek değere döner.
+let lastBlockState = new Map();
 
 function loadStock() {
   try {
@@ -252,6 +271,91 @@ function saveChecked() {
   }
 }
 
+function loadDoneCollapsed() {
+  try {
+    return localStorage.getItem(DONE_COLLAPSED_KEY) === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+function saveDoneCollapsed() {
+  try {
+    localStorage.setItem(DONE_COLLAPSED_KEY, doneCollapsed ? "1" : "0");
+  } catch (e) {
+    /* no-op */
+  }
+}
+
+function loadSortOverride() {
+  try {
+    const raw = localStorage.getItem(SORT_OVERRIDE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveSortOverride() {
+  try {
+    if (tableSortOverride) localStorage.setItem(SORT_OVERRIDE_KEY, JSON.stringify(tableSortOverride));
+    else localStorage.removeItem(SORT_OVERRIDE_KEY);
+  } catch (e) {
+    /* no-op */
+  }
+}
+
+function loadMoneyCollapsed() {
+  try {
+    return localStorage.getItem(MONEY_COLLAPSED_KEY) === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+function saveMoneyCollapsed() {
+  try {
+    localStorage.setItem(MONEY_COLLAPSED_KEY, moneyCollapsed ? "1" : "0");
+  } catch (e) {
+    /* no-op */
+  }
+}
+
+function loadCountMoney() {
+  try {
+    const raw = localStorage.getItem(COUNT_MONEY_KEY);
+    return raw === null ? true : raw === "1";
+  } catch (e) {
+    return true;
+  }
+}
+
+function saveCountMoney() {
+  try {
+    localStorage.setItem(COUNT_MONEY_KEY, countMoney ? "1" : "0");
+  } catch (e) {
+    /* no-op */
+  }
+}
+
+function loadUndoStack() {
+  try {
+    const raw = localStorage.getItem(UNDO_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveUndoStack() {
+  try {
+    localStorage.setItem(UNDO_KEY, JSON.stringify(undoStack.slice(-50)));
+  } catch (e) {
+    /* no-op */
+  }
+}
+
 const STRINGS = {
   tr: {
     title: "BDO Helper",
@@ -327,7 +431,29 @@ const STRINGS = {
       craftable: "REAKTİF / KRİSTAL",
       raw: "HAM MADDE"
     },
-    craftableLabelFor: (sk) => (sk === "cooking" ? "AŞÇILIK ÜRÜNÜ" : "REAKTİF / KRİSTAL")
+    craftableLabelFor: (sk) => (sk === "cooking" ? "AŞÇILIK ÜRÜNÜ" : "REAKTİF / KRİSTAL"),
+    missingSuffix: (n) => `−${formatQty(n)} eksik`,
+    higherBadge: (n, converted) => `+${formatQty(n)} Adv (${formatQty(converted)})`,
+    higherNormalLabel: "NORMAL",
+    higherAdvLabel: "ADVANCED / ENDLESS",
+    higherConverted: (n) => `= ${formatQty(n)} normal`,
+    higherHelpText: (ratio) => `1 üst kalite (Adv/Endless) = ${ratio} normal adet.`,
+    altCount: (n) => `${n} ALTERNATİF`,
+    altSectionTitle: "YERİNE KULLANILABİLİR",
+    altSuffix: (n) => `+${formatQty(n)} ikameden`,
+    doneCollapsedLabel: (n) => `TAMAMLANDI · ${n} KALEM`,
+    sortResetBtn: "EKSİKLER ÜSTTE",
+    drawerFilterMissing: "SADECE EKSİKLER",
+    drawerFilterRaw: "SADECE HAM",
+    drawerFilterEntered: "GİRİLENLER",
+    countMoneyBtn: "PARAYLA ÇÖZÜLENLERİ SAY",
+    moneyGroupTitle: "PARAYLA ÇÖZÜLÜR",
+    priceSourceLabel: { market: "Pazar", npc: "NPC", guild: "Lonca" },
+    priceEstimated: "TAHMİNİ",
+    priceUpdatedNote: (date) => `Fiyatlar ${date} itibarıyla`,
+    undoRestored: "GERİ ALINDI",
+    redoBtn: "YENİDEN UYGULA",
+    gotoRow: "SATIRA GİT →"
   },
   en: {
     title: "BDO Helper",
@@ -403,7 +529,29 @@ const STRINGS = {
       craftable: "REAGENT / CRYSTAL",
       raw: "RAW MATERIAL"
     },
-    craftableLabelFor: (sk) => (sk === "cooking" ? "COOKING PRODUCT" : "REAGENT / CRYSTAL")
+    craftableLabelFor: (sk) => (sk === "cooking" ? "COOKING PRODUCT" : "REAGENT / CRYSTAL"),
+    missingSuffix: (n) => `-${formatQty(n)} missing`,
+    higherBadge: (n, converted) => `+${formatQty(n)} Adv (${formatQty(converted)})`,
+    higherNormalLabel: "NORMAL",
+    higherAdvLabel: "ADVANCED / ENDLESS",
+    higherConverted: (n) => `= ${formatQty(n)} normal`,
+    higherHelpText: (ratio) => `1 higher-grade (Adv/Endless) = ${ratio} normal units.`,
+    altCount: (n) => `${n} ALTERNATIVE`,
+    altSectionTitle: "CAN BE SUBSTITUTED WITH",
+    altSuffix: (n) => `+${formatQty(n)} from substitutes`,
+    doneCollapsedLabel: (n) => `DONE · ${n} ITEMS`,
+    sortResetBtn: "MISSING FIRST",
+    drawerFilterMissing: "MISSING ONLY",
+    drawerFilterRaw: "RAW ONLY",
+    drawerFilterEntered: "ENTERED",
+    countMoneyBtn: "COUNT MONEY-SOLVABLE",
+    moneyGroupTitle: "SOLVABLE WITH MONEY",
+    priceSourceLabel: { market: "Market", npc: "NPC", guild: "Guild" },
+    priceEstimated: "ESTIMATED",
+    priceUpdatedNote: (date) => `Prices as of ${date}`,
+    undoRestored: "UNDONE",
+    redoBtn: "REDO",
+    gotoRow: "GO TO ROW →"
   }
 };
 
@@ -413,6 +561,23 @@ function t() {
 
 function formatPct(n) {
   return lang === "tr" ? String(n).replace(".", ",") : String(n);
+}
+
+function formatQty(n) {
+  return (n || 0).toLocaleString(lang === "tr" ? "tr-TR" : "en-US");
+}
+
+// DATA.md §2: price her zaman elle güncellenen bir TAHMİNİ, hiçbir yerde
+// "kesin fiyat" denmez. g/m/b kısaltmalı gösterim.
+function formatSilver(n) {
+  const v = Math.round(n || 0);
+  if (v < 1000000) return formatQty(v) + " g";
+  if (v < 1000000000) {
+    const m = (v / 1000000).toFixed(2);
+    return (lang === "tr" ? m.replace(".", ",") : m) + " m";
+  }
+  const b = (v / 1000000000).toFixed(2);
+  return (lang === "tr" ? b.replace(".", ",") : b) + " b";
 }
 
 function nameFor(item) {
@@ -609,6 +774,108 @@ function computeFocusSet(id, results) {
   return { all: set, down };
 }
 
+// ── İkame malzemeler (DATA.md §1, SPEC §4c) — SADECE sunum katmanı ─────────
+// data.js'te henüz hiçbir kalemde `substitutes` alanı yok; bu yüzden bu
+// fonksiyonlar bugün her zaman boş/etkisiz sonuç döner. Kullanıcı ileride
+// veriyi eklediğinde kod değişikliği gerekmeden çalışır.
+
+let _substituteGroupsCache = null;
+
+// item.substitutes tek yönlü yazılsa da (A -> B) iki yönlü (A<->B) ve geçişli
+// (A<->B, B<->C ⇒ A<->C) çalışır: kenarları BFS ile gezip her üyenin grubun
+// rastgele bir "kök" üyesine göre oranını (factor) buluyoruz — 1 kök = factor[x]
+// adet x. Varsayılan oran 1:1; {id, ratio} verilirse ratio = "1 sahibi madde
+// için gereken bu ikameden adet" (DATA.md örneği: 2 kurt kanı = 1 tilki kanı).
+function getSubstituteGroups() {
+  if (_substituteGroupsCache) return _substituteGroupsCache;
+  const groups = new Map();
+  const adj = {};
+  function addEdge(a, b, ratio) {
+    if (!RECIPES.items[a] || !RECIPES.items[b]) return;
+    if (!adj[a]) adj[a] = [];
+    if (!adj[b]) adj[b] = [];
+    adj[a].push({ id: b, perOne: ratio });
+    adj[b].push({ id: a, perOne: 1 / ratio });
+  }
+  Object.entries(RECIPES.items).forEach(([id, item]) => {
+    if (!item.substitutes) return;
+    item.substitutes.forEach((sub) => {
+      const subId = typeof sub === "string" ? sub : (sub && sub.id);
+      const ratio = typeof sub === "string" ? 1 : (sub && sub.ratio) || 1;
+      if (subId) addEdge(id, subId, ratio);
+    });
+  });
+
+  const visited = new Set();
+  Object.keys(adj).forEach((rootId) => {
+    if (visited.has(rootId)) return;
+    const factor = { [rootId]: 1 };
+    visited.add(rootId);
+    const queue = [rootId];
+    while (queue.length) {
+      const cur = queue.shift();
+      (adj[cur] || []).forEach((edge) => {
+        if (!visited.has(edge.id)) {
+          visited.add(edge.id);
+          factor[edge.id] = factor[cur] * edge.perOne;
+          queue.push(edge.id);
+        }
+      });
+    }
+    const memberIds = Object.keys(factor);
+    if (memberIds.length < 2) return;
+    let nameTr = null;
+    let nameEn = null;
+    let key = null;
+    memberIds.forEach((id) => {
+      const item = RECIPES.items[id];
+      if (item && item.substituteGroup && !nameTr && !nameEn) {
+        nameTr = item.substituteGroup.name_tr || null;
+        nameEn = item.substituteGroup.name_en || null;
+        key = item.substituteGroup.key || null;
+      }
+    });
+    if (!nameTr && !nameEn) {
+      const first = RECIPES.items[memberIds[0]];
+      nameTr = first.name_tr || null;
+      nameEn = first.name_en || null;
+    }
+    const groupObj = { members: memberIds.map((id) => ({ id, factor: factor[id] })), nameTr, nameEn, key };
+    memberIds.forEach((id) => groups.set(id, groupObj));
+  });
+
+  _substituteGroupsCache = groups;
+  return groups;
+}
+
+function substituteGroupName(group) {
+  return (lang === "tr" ? group.nameTr : group.nameEn) || group.nameTr || group.nameEn || "";
+}
+
+// Bir maddenin kendi stoğu + grubundaki diğer üyelerin stoğunun (kendi
+// birimine oranla çevrilmiş) toplamı. Grubu yoksa `node.have` ile birebir
+// aynıdır — computeAll'ın kendi `missing` alanı bundan ETKİLENMEZ, sadece
+// ekranda gösterilen/gruplanan değerler bu sarmalayıcıdan geçer.
+function getEffectiveHave(node, allResults) {
+  const groups = getSubstituteGroups();
+  const group = groups.get(node.id);
+  if (!group) return node.have;
+  const self = group.members.find((m) => m.id === node.id);
+  if (!self) return node.have;
+  let total = node.have;
+  group.members.forEach((m) => {
+    if (m.id === node.id) return;
+    const other = allResults[m.id];
+    if (!other) return;
+    total += other.have * (self.factor / m.factor);
+  });
+  return total;
+}
+
+function getEffectiveMissing(node, allResults) {
+  return Math.max(0, node.required - getEffectiveHave(node, allResults));
+}
+
 function sectionOf(node) {
   if (node.isRaw) return "raw";
   return node.tier || "craftable";
@@ -641,25 +908,48 @@ function looksPurchased(text) {
 
 // Huni görünümündeki satırın ikinci (meta) satırı: üretilebilir maddede
 // üretim/verim özeti, ham maddede kaynak ya da "X gerekli [· Y elimde]".
-function computeRowMeta(node) {
+// Yetersizken (SPEC (1).md §1) sona her zaman "−N eksik" eklenir.
+function computeRowMeta(node, withSuffix) {
+  if (withSuffix === undefined) withSuffix = true;
   const s = t();
+  let m;
   if (node.isRaw) {
     const source = lang === "tr" ? node.source_tr : node.source_en;
-    if (source && looksPurchased(source)) return shortenSource(source);
-    const { secondary } = nameFor(node);
-    let m = secondary ? `${secondary} · ${s.reqShort(node.required)}` : s.reqShort(node.required);
-    if (node.have > 0) m += ` · ${s.haveShort(node.have)}`;
-    return m;
-  }
-  if (node.batches > 0) {
-    return (skill === "alchemy" && mastery > 0 && node.hasYieldBonus)
+    if (source && looksPurchased(source)) {
+      m = shortenSource(source);
+    } else {
+      const { secondary } = nameFor(node);
+      m = secondary ? `${secondary} · ${s.reqShort(node.required)}` : s.reqShort(node.required);
+      if (node.have > 0) m += ` · ${s.haveShort(node.have)}`;
+    }
+  } else if (node.batches > 0) {
+    m = (skill === "alchemy" && mastery > 0 && node.hasYieldBonus)
       ? s.batchesBadgeMastery(node.batches, node.producedQty)
       : s.batchesBadge(node.batches, node.producedQty);
+  } else {
+    m = node.masteryApplies ? s.methodTool(skill) : s.methodSimple(skill);
   }
-  return node.masteryApplies ? s.methodTool(skill) : s.methodSimple(skill);
+  if (withSuffix) {
+    if (node.isElixir && node.higherHave > 0) {
+      m += ` · ${s.higherBadge(node.higherHave, node.higherHave * HIGHER_GRADE_RATIO)}`;
+    }
+    if (node.missing > 0) {
+      m += ` · ${s.missingSuffix(node.missing)}`;
+    }
+  }
+  return m;
 }
 
 // ── Render modeli: saf veri, DOM'a dokunmaz ────────────────────────────────
+
+function getFocusedStockItemId() {
+  const active = document.activeElement;
+  if (active && active.classList &&
+    (active.classList.contains("stock-field") || active.classList.contains("stock-field-higher"))) {
+    return active.dataset.item || null;
+  }
+  return null;
+}
 
 function computeRenderModel() {
   const itemSelect = document.getElementById("itemSelect");
@@ -726,26 +1016,72 @@ function computeRenderModel() {
   });
 
   const baseVisible = (nodes) => nodes.filter((n) =>
-    (!displayIds || displayIds.has(n.id)) && (!onlyMissing || n.missing > 0));
+    (!displayIds || displayIds.has(n.id)) && (!onlyMissing || getEffectiveMissing(n, resultsMapFor(n.id)) > 0));
+
+  // İki bloklu sıralama (SPEC (1).md §4b): her bölüm "eksik" (miktara göre
+  // azalan) ve "tamamlandı" (ada göre artan, sönük) olarak ikiye ayrılır.
+  // O an bir stok input'u odaktaysa (yazıyorken), o maddenin blok üyeliği bir
+  // önceki render'daki GERÇEK haliyle donar — satır elinin altından kaymaz;
+  // input blur olduğunda odak kalktığı için bir sonraki repaint gerçek
+  // değere anında oturur. `blockOf` TÜM ağaç için (görünürlük/arama
+  // filtrelerinden bağımsız) hesaplanır ki çekmece (§6) de aynı donuk
+  // sınıflandırmayı okuyabilsin.
+  const focusedStockId = getFocusedStockItemId();
+  const blockOf = new Map();
+  const nextBlockState = new Map();
+  Object.keys(results).forEach((id) => {
+    const scope = resultsMapFor(id);
+    const node = scope[id];
+    const effMissing = getEffectiveMissing(node, scope);
+    const trueKey = effMissing > 0 ? "missing" : "done";
+    nextBlockState.set(id, trueKey);
+    const key = (id === focusedStockId && lastBlockState.has(id)) ? lastBlockState.get(id) : trueKey;
+    blockOf.set(id, key);
+  });
+  lastBlockState = nextBlockState;
 
   let baseCount = 0;
   let matchedCount = 0;
   const sections = SECTION_ORDER.map((tier) => {
     const base = baseVisible(bySection[tier] || []);
     baseCount += base.length;
-    const nodes = base.filter(matchesQuery)
-      .sort((a, b) => nameFor(a).primary.localeCompare(nameFor(b).primary, lang));
-    matchedCount += nodes.length;
-    return { tier, nodes };
-  }).filter((s) => s.nodes.length > 0);
+    const filtered = base.filter(matchesQuery);
+    matchedCount += filtered.length;
+
+    const missingRows = [];
+    const doneRows = [];
+    filtered.forEach((node) => {
+      const effMissing = getEffectiveMissing(node, resultsMapFor(node.id));
+      const key = blockOf.get(node.id);
+      (key === "missing" ? missingRows : doneRows).push({ node, effMissing });
+    });
+    missingRows.sort((a, b) =>
+      b.effMissing - a.effMissing || nameFor(a.node).primary.localeCompare(nameFor(b.node).primary, lang));
+    doneRows.sort((a, b) => nameFor(a.node).primary.localeCompare(nameFor(b.node).primary, lang));
+
+    return {
+      tier,
+      missingNodes: missingRows.map((r) => r.node),
+      doneNodes: doneRows.map((r) => r.node)
+    };
+  }).filter((s) => s.missingNodes.length > 0 || s.doneNodes.length > 0);
 
   const hiddenByQuery = query ? Math.max(0, baseCount - matchedCount) : 0;
 
-  const doneCount = Object.values(results).filter((n) => n.missing === 0).length;
-  const totalCount = Object.keys(results).length;
+  // SPEC (1).md §7: "PARAYLA ÇÖZÜLENLERİ SAY" kapalıyken unlimited:true
+  // kalemler ilerleme paydasından/sayaçlarından tamamen çıkar. Bugün hiçbir
+  // kalemde `unlimited` olmadığından bu dal hiçbir şeyi değiştirmez.
+  let doneCount = 0;
+  let totalCount = 0;
+  Object.keys(results).forEach((id) => {
+    const item = getItem(id);
+    if (!countMoney && item.unlimited) return;
+    totalCount++;
+    if (getEffectiveMissing(results[id], resultsMapFor(id)) === 0) doneCount++;
+  });
 
   return {
-    results, resultsMapFor, sections, query, hiddenByQuery,
+    results, resultsMapFor, sections, query, hiddenByQuery, blockOf,
     selectedId, targetQty, masteryPct,
     rootNode: results[selectedId],
     doneCount, totalCount,
@@ -775,6 +1111,90 @@ function buildDetailPanel(node, allResults) {
   const item = getItem(node.id);
   const wrap = document.createElement("div");
   wrap.className = "row-detail";
+
+  // SPEC (1).md §3: üst kalite (Adv/Endless) girişi artık satır kapalıyken
+  // görünmez — sadece burada, genişletilmiş detayda, etiketli iki alan +
+  // canlı "= N normal" dönüşümüyle gösterilir.
+  if (node.isElixir) {
+    const higherWrap = document.createElement("div");
+    higherWrap.className = "rd-higher";
+
+    const title = document.createElement("div");
+    title.className = "rd-title";
+    title.textContent = s.inStockHigher;
+    higherWrap.appendChild(title);
+
+    const normalRow = document.createElement("div");
+    normalRow.className = "rd-higher-row";
+    const normalLabel = document.createElement("label");
+    normalLabel.className = "rd-higher-label";
+    normalLabel.textContent = s.higherNormalLabel;
+    normalRow.appendChild(normalLabel);
+    normalRow.appendChild(buildStepper(node, false));
+    higherWrap.appendChild(normalRow);
+
+    const advRow = document.createElement("div");
+    advRow.className = "rd-higher-row";
+    const advLabel = document.createElement("label");
+    advLabel.className = "rd-higher-label";
+    advLabel.textContent = s.higherAdvLabel;
+    advRow.appendChild(advLabel);
+    const higherInput = buildStepper(node, true);
+    advRow.appendChild(higherInput);
+    const converted = document.createElement("span");
+    converted.className = "rd-higher-converted";
+    converted.textContent = s.higherConverted((stockHigh[node.id] || 0) * HIGHER_GRADE_RATIO);
+    higherInput.addEventListener("input", () => {
+      const n = Math.max(0, parseInt(higherInput.value, 10) || 0);
+      converted.textContent = s.higherConverted(n * HIGHER_GRADE_RATIO);
+    });
+    advRow.appendChild(converted);
+    higherWrap.appendChild(advRow);
+
+    const help = document.createElement("div");
+    help.className = "rd-higher-help";
+    help.textContent = s.higherHelpText(HIGHER_GRADE_RATIO);
+    higherWrap.appendChild(help);
+
+    wrap.appendChild(higherWrap);
+  }
+
+  // SPEC (1).md §4c: ikame malzemeler — sadece grubu olan kalemlerde görünür.
+  // data.js'te henüz `substitutes` alanı yokken bu blok hiç render edilmez.
+  const substituteGroup = getSubstituteGroups().get(node.id);
+  if (substituteGroup) {
+    const label = document.createElement("div");
+    label.className = "rd-title";
+    label.textContent = s.altSectionTitle;
+    wrap.appendChild(label);
+    substituteGroup.members
+      .filter((m) => m.id !== node.id)
+      .forEach((m) => {
+        const otherItem = getItem(m.id);
+        const otherResult = allResults[m.id];
+        const otherHave = otherResult ? otherResult.have : (stock[m.id] || 0);
+        const otherRequired = otherResult ? otherResult.required : 0;
+        const line = document.createElement("div");
+        line.className = "rd-alt-line";
+        if (otherItem.icon) {
+          const icon = document.createElement("img");
+          icon.className = "row-icon";
+          icon.src = otherItem.icon;
+          icon.alt = "";
+          line.appendChild(icon);
+        }
+        const nm = document.createElement("span");
+        nm.className = "rd-alt-name";
+        nm.textContent = nameFor(otherItem).primary;
+        line.appendChild(nm);
+        const qty = document.createElement("span");
+        qty.className = "rd-alt-qty";
+        qty.textContent = `${formatQty(otherHave)}/${formatQty(otherRequired)}`;
+        line.appendChild(qty);
+        line.appendChild(buildStepper({ id: m.id }, false));
+        wrap.appendChild(line);
+      });
+  }
 
   if (item.recipe && item.recipe.ingredients.length > 0 && node.batches > 0) {
     const label = document.createElement("div");
@@ -835,6 +1255,25 @@ function buildDetailPanel(node, allResults) {
   return wrap;
 }
 
+// Her yerde ortak kullanılan "elimde/gerekli" durum rozeti (SPEC (1).md §1):
+// yeterliyken de gösterilir, sonuna ✓ eklenir; yetersizken "elimde" kısmı
+// vurgulanır. `font-variant-numeric: tabular-nums` CSS'te uygulanır.
+function buildQtyStatus(node) {
+  const status = document.createElement("span");
+  status.className = "row-status " + (node.missing > 0 ? "miss" : "ok");
+  const haveSpan = document.createElement("span");
+  haveSpan.className = "qty-have" + (node.missing > 0 ? " short" : "");
+  haveSpan.textContent = formatQty(node.have);
+  status.appendChild(haveSpan);
+  status.appendChild(document.createTextNode("/"));
+  const reqSpan = document.createElement("span");
+  reqSpan.className = "qty-req";
+  reqSpan.textContent = formatQty(node.required);
+  status.appendChild(reqSpan);
+  if (node.missing === 0) status.appendChild(document.createTextNode(" ✓"));
+  return status;
+}
+
 function highlightMatch(text, query) {
   if (!query) return document.createTextNode(text);
   const idx = text.toLocaleLowerCase(lang).indexOf(query);
@@ -875,27 +1314,29 @@ function buildFunnelRow(node, allResults, query) {
   nameEl.appendChild(highlightMatch(primary, query));
   const metaEl = document.createElement("div");
   metaEl.className = "row-meta";
-  const metaText = computeRowMeta(node);
+  let metaText = computeRowMeta(node);
+  const substituteGroup = getSubstituteGroups().get(node.id);
+  if (substituteGroup) {
+    const extra = getEffectiveHave(node, allResults) - node.have;
+    if (extra > 0) metaText += ` · ${s.altSuffix(extra)}`;
+  }
   metaEl.textContent = metaText;
   // İsim/meta metni dar kolonlarda kesiliyor (ellipsis) — üzerine gelince
   // tam metni gösteren tooltip.
   text.title = `${primary}${secondary ? " · " + secondary : ""}\n${metaText}`;
   text.appendChild(nameEl);
+  if (substituteGroup) {
+    const altTag = document.createElement("span");
+    altTag.className = "tag-outline row-alt-tag";
+    altTag.textContent = s.altCount(substituteGroup.members.length - 1);
+    text.appendChild(altTag);
+  }
   text.appendChild(metaEl);
   hit.appendChild(text);
   row.appendChild(hit);
 
-  const status = document.createElement("span");
-  status.className = "row-status " + (node.missing > 0 ? "miss" : "ok");
-  status.textContent = node.missing > 0 ? String(node.missing) : "✓";
-  row.appendChild(status);
-
-  if (!node.isRaw) {
-    row.appendChild(buildStepper(node, false));
-    if (node.isElixir) row.appendChild(buildStepper(node, true));
-  } else {
-    row.appendChild(buildStepper(node, false));
-  }
+  row.appendChild(buildQtyStatus(node));
+  row.appendChild(buildStepper(node, false));
 
   const expandBtn = document.createElement("button");
   expandBtn.type = "button";
@@ -909,6 +1350,23 @@ function buildFunnelRow(node, allResults, query) {
     wrapper.appendChild(buildDetailPanel(node, allResults));
   }
   return wrapper;
+}
+
+// ── Ortak: eksik/tamamlandı iki bloklu render arasındaki katlanır ayraç ────
+// (SPEC (1).md §4b — huni kolonlarında, tabloda ve çekmecede aynı davranış)
+
+function buildBlockDivider(n) {
+  const div = document.createElement("div");
+  div.className = "block-divider";
+  div.setAttribute("role", "button");
+  div.tabIndex = 0;
+  div.textContent = (doneCollapsed ? "▸ " : "▾ ") + t().doneCollapsedLabel(n);
+  div.addEventListener("click", () => {
+    doneCollapsed = !doneCollapsed;
+    saveDoneCollapsed();
+    repaint();
+  });
+  return div;
 }
 
 // ── Huni görünümü ───────────────────────────────────────────────────────
@@ -926,7 +1384,7 @@ function paintFunnel(model) {
     return;
   }
 
-  model.sections.forEach(({ tier, nodes }) => {
+  model.sections.forEach(({ tier, missingNodes, doneNodes }) => {
     const col = document.createElement("div");
     col.className = "col";
     const head = document.createElement("div");
@@ -936,16 +1394,24 @@ function paintFunnel(model) {
     title.textContent = sectionLabel(tier, skill);
     const count = document.createElement("span");
     count.className = "col-count";
-    count.textContent = String(nodes.length);
+    count.textContent = String(missingNodes.length + doneNodes.length);
     head.appendChild(title);
     head.appendChild(count);
     col.appendChild(head);
 
     const rows = document.createElement("div");
     rows.className = "col-rows";
-    nodes.forEach((node) => {
+    missingNodes.forEach((node) => {
       rows.appendChild(buildFunnelRow(node, model.resultsMapFor(node.id), model.query));
     });
+    if (doneNodes.length) {
+      rows.appendChild(buildBlockDivider(doneNodes.length));
+      if (!doneCollapsed) {
+        doneNodes.forEach((node) => {
+          rows.appendChild(buildFunnelRow(node, model.resultsMapFor(node.id), model.query));
+        });
+      }
+    }
     col.appendChild(rows);
     view.appendChild(col);
   });
@@ -1010,30 +1476,24 @@ function buildTableRow(node, allResults, query) {
   row.appendChild(tierCell);
 
   const reqCell = document.createElement("span");
-  reqCell.className = "td-req";
-  reqCell.textContent = String(node.required);
+  reqCell.className = "td-req" + (node.missing === 0 ? " dim" : "");
+  reqCell.textContent = formatQty(node.required);
   row.appendChild(reqCell);
 
   const haveCell = document.createElement("span");
   haveCell.className = "td-have";
-  const haveInput = document.createElement("input");
-  haveInput.type = "number";
-  haveInput.min = "0";
-  haveInput.dataset.item = node.id;
-  haveInput.className = "stock-field";
-  haveInput.value = stock[node.id] || 0;
-  haveCell.appendChild(haveInput);
+  haveCell.appendChild(buildStepper(node, false));
   row.appendChild(haveCell);
 
   const missCell = document.createElement("span");
   missCell.className = "td-miss";
   missCell.style.color = node.missing > 0 ? "var(--color-accent)" : "var(--color-dim-2)";
-  missCell.textContent = node.missing > 0 ? String(node.missing) : "✓";
+  missCell.textContent = node.missing > 0 ? formatQty(node.missing) : "✓";
   row.appendChild(missCell);
 
   const craftCell = document.createElement("span");
   craftCell.className = "td-craft";
-  craftCell.textContent = node.isRaw ? "—" : computeRowMeta(node);
+  craftCell.textContent = node.isRaw ? "—" : computeRowMeta(node, false);
   row.appendChild(craftCell);
 
   const pctCell = document.createElement("span");
@@ -1052,7 +1512,33 @@ function buildTableRow(node, allResults, query) {
   pctCell.appendChild(pctText);
   row.appendChild(pctCell);
 
-  return row;
+  // SPEC (1).md §3: elixir kalemlerinde üst kalite girişi artık bu genişletme
+  // panelinde — tablo satırları da huni gibi kendi detay panelini açabilir.
+  const expandBtn = document.createElement("button");
+  expandBtn.type = "button";
+  expandBtn.className = "row-expand td-expand";
+  expandBtn.textContent = expandedIds.has(node.id) ? "▴" : "▾";
+  row.appendChild(expandBtn);
+
+  const wrapper = document.createDocumentFragment();
+  wrapper.appendChild(row);
+  if (expandedIds.has(node.id)) {
+    wrapper.appendChild(buildDetailPanel(node, allResults));
+  }
+  return wrapper;
+}
+
+function tableSortValue(node, col, allResults) {
+  switch (col) {
+    case "name": return nameFor(node).primary.toLocaleLowerCase(lang);
+    case "tier": return SECTION_ORDER.indexOf(sectionOf(node));
+    case "req": return node.required;
+    case "have": return node.have;
+    case "miss": return getEffectiveMissing(node, allResults);
+    case "craft": return node.batches || 0;
+    case "pct": return node.required > 0 ? node.have / node.required : 1;
+    default: return 0;
+  }
 }
 
 function paintTable(model) {
@@ -1060,14 +1546,26 @@ function paintTable(model) {
   const head = document.getElementById("tableHead");
   head.innerHTML = "";
   [
-    ["th-name", s.colName], ["th-tier", s.colTier], ["th-req", s.colReq],
-    ["th-have", s.colHave], ["th-miss", s.colMiss], ["th-craft", s.colCraft], ["th-pct", s.colProgress]
-  ].forEach(([cls, text]) => {
+    ["th-name", "name", s.colName], ["th-tier", "tier", s.colTier], ["th-req", "req", s.colReq],
+    ["th-have", "have", s.colHave], ["th-miss", "miss", s.colMiss], ["th-craft", "craft", s.colCraft],
+    ["th-pct", "pct", s.colProgress]
+  ].forEach(([cls, col, text]) => {
     const span = document.createElement("span");
-    span.className = cls;
-    span.textContent = text;
+    span.className = cls + " th-sortable";
+    span.dataset.sortCol = col;
+    let label = text;
+    if (tableSortOverride && tableSortOverride.col === col) {
+      label += tableSortOverride.dir === "asc" ? " ▲" : " ▼";
+      span.classList.add("active");
+    }
+    span.textContent = label;
     head.appendChild(span);
   });
+  const expandHead = document.createElement("span");
+  expandHead.className = "th-expand";
+  head.appendChild(expandHead);
+
+  document.getElementById("sortResetBtn").hidden = !tableSortOverride;
 
   const tierFilterEl = document.getElementById("tierFilter");
   tierFilterEl.innerHTML = "";
@@ -1089,34 +1587,70 @@ function paintTable(model) {
 
   const rowsEl = document.getElementById("tableRows");
   rowsEl.innerHTML = "";
-  let nodes = model.sections
-    .filter((sec) => tableTierFilter === "all" || sec.tier === tableTierFilter)
-    .flatMap((sec) => sec.nodes);
-  nodes = nodes.slice().sort((a, b) => b.missing - a.missing);
-
+  const filteredSections = model.sections.filter((sec) =>
+    tableTierFilter === "all" || sec.tier === tableTierFilter);
   const footer = document.getElementById("tableFooter");
-  if (!nodes.length) {
+
+  function renderRows(nodes) {
+    nodes.forEach((node) => {
+      rowsEl.appendChild(buildTableRow(node, model.resultsMapFor(node.id), model.query));
+    });
+  }
+
+  let isEmpty;
+  if (tableSortOverride) {
+    // SPEC (1).md §2: bir sütun başlığına tıklamak varsayılan iki-bloklu
+    // sıralamayı geçici olarak geçersiz kılar — tek liste, o sütuna göre.
+    const allNodes = filteredSections.flatMap((sec) => [...sec.missingNodes, ...sec.doneNodes]);
+    const dir = tableSortOverride.dir === "asc" ? 1 : -1;
+    allNodes.sort((a, b) => {
+      const av = tableSortValue(a, tableSortOverride.col, model.resultsMapFor(a.id));
+      const bv = tableSortValue(b, tableSortOverride.col, model.resultsMapFor(b.id));
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+    isEmpty = !allNodes.length;
+    if (!isEmpty) renderRows(allNodes);
+  } else {
+    const missingAll = [];
+    const doneAll = [];
+    filteredSections.forEach((sec) => {
+      missingAll.push(...sec.missingNodes);
+      doneAll.push(...sec.doneNodes);
+    });
+    missingAll.sort((a, b) =>
+      getEffectiveMissing(b, model.resultsMapFor(b.id)) - getEffectiveMissing(a, model.resultsMapFor(a.id)) ||
+      nameFor(a).primary.localeCompare(nameFor(b).primary, lang));
+    doneAll.sort((a, b) => nameFor(a).primary.localeCompare(nameFor(b).primary, lang));
+
+    isEmpty = !missingAll.length && !doneAll.length;
+    if (!isEmpty) {
+      renderRows(missingAll);
+      if (doneAll.length) {
+        rowsEl.appendChild(buildBlockDivider(doneAll.length));
+        if (!doneCollapsed) renderRows(doneAll);
+      }
+    }
+  }
+
+  if (isEmpty) {
     const noResults = document.createElement("div");
     noResults.className = "no-results";
     noResults.textContent = s.noResults;
     rowsEl.appendChild(noResults);
     footer.hidden = true;
+  } else if (model.hiddenByQuery > 0) {
+    footer.hidden = false;
+    footer.innerHTML = "";
+    footer.appendChild(document.createTextNode(s.noResultsFooter(model.hiddenByQuery)));
+    const link = document.createElement("a");
+    link.href = "#";
+    link.textContent = s.showAll;
+    link.addEventListener("click", (e) => { e.preventDefault(); setSearch(""); });
+    footer.appendChild(link);
   } else {
-    nodes.forEach((node) => {
-      rowsEl.appendChild(buildTableRow(node, model.resultsMapFor(node.id), model.query));
-    });
-    if (model.hiddenByQuery > 0) {
-      footer.hidden = false;
-      footer.innerHTML = "";
-      footer.appendChild(document.createTextNode(s.noResultsFooter(model.hiddenByQuery)));
-      const link = document.createElement("a");
-      link.href = "#";
-      link.textContent = s.showAll;
-      link.addEventListener("click", (e) => { e.preventDefault(); setSearch(""); });
-      footer.appendChild(link);
-    } else {
-      footer.hidden = true;
-    }
+    footer.hidden = true;
   }
 }
 
@@ -1221,6 +1755,7 @@ function repaint() {
   paintTargetBar(model);
   document.getElementById("funnelView").hidden = view !== "funnel";
   document.getElementById("tableView").hidden = view !== "table";
+  if (drawerOpen) paintDrawer(model);
   if (!model) {
     document.getElementById("funnelView").innerHTML = "";
     document.getElementById("tableRows").innerHTML = "";
@@ -1230,7 +1765,6 @@ function repaint() {
   paintFocusBar(model);
   if (view === "funnel") paintFunnel(model);
   else paintTable(model);
-  if (drawerOpen) paintDrawer();
 }
 
 function setSearch(value) {
@@ -1238,16 +1772,16 @@ function setSearch(value) {
   const input = document.getElementById("globalSearch");
   if (input.value !== value) input.value = value;
   document.getElementById("searchBox").classList.toggle("active", !!value);
-  if (drawerOpen) paintDrawer();
-  else repaint();
+  repaint();
 }
 
-// ── Toplu stok çekmecesi ────────────────────────────────────────────────
+// ── Toplu stok çekmecesi (SPEC (1).md §6 — kendi arama kutusu + klavye akışı) ─
 
-function buildDrawerRow(id, item) {
+function buildDrawerRow(id, item, node) {
   const { primary, secondary } = nameFor(item);
   const row = document.createElement("div");
   row.className = "drawer-row";
+  row.dataset.item = id;
   if (item.icon) {
     const icon = document.createElement("img");
     icon.className = "row-icon";
@@ -1261,6 +1795,7 @@ function buildDrawerRow(id, item) {
   name.textContent = secondary ? `${primary} · ${secondary}` : primary;
   name.title = name.textContent;
   row.appendChild(name);
+  if (node) row.appendChild(buildQtyStatus(node));
   row.appendChild(buildStepper({ id, isElixir: false }, false));
   if (item.tier === "elixir") {
     row.appendChild(buildStepper({ id, isElixir: true }, true));
@@ -1268,27 +1803,44 @@ function buildDrawerRow(id, item) {
   return row;
 }
 
-function paintDrawer() {
+function setDrawerSearch(value) {
+  drawerQuery = value;
+  const input = document.getElementById("drawerSearch");
+  if (input.value !== value) input.value = value;
+  document.getElementById("drawerSearchBox").classList.toggle("active", !!value);
+  document.getElementById("drawerSearchClear").hidden = !value;
+  paintDrawer();
+}
+
+function updateDrawerChipsUI() {
+  document.querySelectorAll("#drawerChips button[data-chip]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.chip === drawerChip);
+  });
+}
+
+function paintDrawer(model) {
+  if (model === undefined) model = computeRenderModel();
   const s = t();
   const listEl = document.getElementById("stockDrawerList");
   listEl.innerHTML = "";
 
-  const query = funnelQuery.trim().toLocaleLowerCase(lang);
-  const byTier = {};
+  const query = drawerQuery.trim().toLocaleLowerCase(lang);
+  const items = [];
   Object.entries(RECIPES.items).forEach(([id, item]) => {
     if ((item.skill || "alchemy") !== skill) return;
     const { primary, secondary } = nameFor(item);
-    const matches = !query ||
+    const matchesQuery = !query ||
       primary.toLocaleLowerCase(lang).includes(query) ||
       (secondary && secondary.toLocaleLowerCase(lang).includes(query));
-    if (!matches) return;
-    const tier = item.tier || "craftable";
-    if (!byTier[tier]) byTier[tier] = [];
-    byTier[tier].push({ id, item });
+    if (!matchesQuery) return;
+    const node = model ? model.results[id] : null;
+    if (drawerChip === "raw" && item.recipe) return;
+    if (drawerChip === "missing" && !(node && node.missing > 0)) return;
+    if (drawerChip === "entered" && !((stock[id] || 0) > 0 || (stockHigh[id] || 0) > 0)) return;
+    items.push({ id, item, node });
   });
 
-  const activeTiers = SECTION_ORDER.filter((tier) => byTier[tier] && byTier[tier].length);
-  if (!activeTiers.length) {
+  if (!items.length) {
     const noResults = document.createElement("div");
     noResults.className = "no-results";
     noResults.textContent = s.noResults;
@@ -1296,38 +1848,61 @@ function paintDrawer() {
     return;
   }
 
-  activeTiers.forEach((tier) => {
-    const group = document.createElement("div");
-    group.className = "drawer-group";
-    const h3 = document.createElement("h3");
-    h3.textContent = sectionLabel(tier, skill);
-    group.appendChild(h3);
-    byTier[tier]
-      .sort((a, b) => nameFor(a.item).primary.localeCompare(nameFor(b.item).primary, lang))
-      .forEach(({ id, item }) => group.appendChild(buildDrawerRow(id, item)));
-    listEl.appendChild(group);
+  // İki bloklu sıralama, ana ağaçtaki aynı donuk `blockOf` sınıflandırmasını
+  // kullanır — böylece huni/tablo/çekmece bir maddeyi hep aynı şekilde
+  // gruplar ve yazarken satır sıçramaz (SPEC (1).md §2/§6).
+  const missingItems = [];
+  const otherItems = [];
+  items.forEach((x) => {
+    const key = (model && x.node) ? model.blockOf.get(x.id) : null;
+    (key === "missing" ? missingItems : otherItems).push(x);
   });
+  missingItems.sort((a, b) =>
+    b.node.missing - a.node.missing || nameFor(a.item).primary.localeCompare(nameFor(b.item).primary, lang));
+  otherItems.sort((a, b) => nameFor(a.item).primary.localeCompare(nameFor(b.item).primary, lang));
+
+  missingItems.forEach(({ id, item, node }) => listEl.appendChild(buildDrawerRow(id, item, node)));
+  if (otherItems.length) {
+    listEl.appendChild(buildBlockDivider(otherItems.length));
+    if (!doneCollapsed) {
+      otherItems.forEach(({ id, item, node }) => listEl.appendChild(buildDrawerRow(id, item, node)));
+    }
+  }
+}
+
+function focusNextMissingDrawerInput(afterId) {
+  const model = computeRenderModel();
+  const inputs = Array.from(document.querySelectorAll("#stockDrawerList .stock-field"));
+  const idx = inputs.findIndex((el) => el.dataset.item === afterId);
+  for (let i = idx + 1; i < inputs.length; i++) {
+    const id = inputs[i].dataset.item;
+    const node = model && model.results[id];
+    if (node && node.missing > 0) {
+      inputs[i].focus();
+      inputs[i].select();
+      return true;
+    }
+  }
+  return false;
 }
 
 function openDrawer() {
   drawerOpen = true;
   document.getElementById("stockDrawer").hidden = false;
-  const backdrop = document.getElementById("drawerBackdrop");
-  // Backdrop sadece komuta çubuğunun ALTINDAKİ alanı kaplar, böylece paylaşılan
-  // arama kutusu (shell içinde) çekmece açıkken de tıklanabilir/odaklanabilir kalır.
-  backdrop.style.top = document.getElementById("shell").getBoundingClientRect().bottom + "px";
-  backdrop.hidden = false;
+  document.getElementById("drawerBackdrop").hidden = false;
   document.getElementById("drawerTitle").textContent = t().drawerTitle;
-  document.getElementById("globalSearch").placeholder = t().drawerSearchPlaceholder;
+  updateDrawerChipsUI();
   paintDrawer();
+  requestAnimationFrame(() => {
+    const input = document.getElementById("drawerSearch");
+    if (input) input.focus();
+  });
 }
 
 function closeDrawer() {
   drawerOpen = false;
   document.getElementById("stockDrawer").hidden = true;
   document.getElementById("drawerBackdrop").hidden = true;
-  document.getElementById("globalSearch").placeholder = t().searchPlaceholderGlobal;
-  setSearch("");
 }
 
 // ── Toplama listesi ekranı ──────────────────────────────────────────────
@@ -1338,6 +1913,130 @@ function parseSilverPrice(text) {
   if (!m) return null;
   const n = parseFloat(m[1].replace(/\./g, "").replace(",", "."));
   return Number.isFinite(n) ? n : null;
+}
+
+// SPEC (1).md §4c: aynı ikame grubundaki ham maddeler toplama listesinde TEK
+// satırda birleşir (grubun ilk üyesi "çapa" alınır, gerçek üyelerin stoğu
+// oranla toplanır). data.js'te henüz `substitutes` yokken her ham madde kendi
+// tek satırında kalır — davranış birebir eskisiyle aynıdır.
+function buildGatherEntries(model) {
+  const groups = getSubstituteGroups();
+  const seen = new Set();
+  const entries = [];
+  Object.values(model.results).forEach((n) => {
+    if (!n.isRaw) return;
+    const group = groups.get(n.id);
+    if (group) {
+      const gkey = group.members.map((m) => m.id).sort().join("|");
+      if (seen.has(gkey)) return;
+      seen.add(gkey);
+      const anchorMember = group.members.find((m) => model.results[m.id]);
+      const anchorNode = anchorMember && model.results[anchorMember.id];
+      if (!anchorNode) return;
+      const effHave = getEffectiveHave(anchorNode, model.results);
+      const effMissing = Math.max(0, anchorNode.required - effHave);
+      if (effMissing <= 0) return;
+      entries.push({ id: anchorNode.id, node: anchorNode, group, effMissing, effHave });
+    } else {
+      if (n.missing <= 0) return;
+      entries.push({ id: n.id, node: n, group: null, effMissing: n.missing, effHave: n.have });
+    }
+  });
+  return entries;
+}
+
+function buildGatherGroupHeader(title, count, totalPrice) {
+  const s = t();
+  const gh = document.createElement("div");
+  gh.className = "gv-group-head";
+  const gt = document.createElement("span");
+  gt.className = "g-title";
+  gt.textContent = title;
+  gh.appendChild(gt);
+  const gm = document.createElement("span");
+  gm.className = "g-meta";
+  gm.textContent = s.itemsCount(count) + (totalPrice > 0 ? ` · ${s.priceEstimated} ${formatSilver(totalPrice)}` : "");
+  gh.appendChild(gm);
+  return gh;
+}
+
+function buildMoneyDivider(count, totalPrice) {
+  const s = t();
+  const div = document.createElement("div");
+  div.className = "gv-group-head money-toggle";
+  div.setAttribute("role", "button");
+  div.tabIndex = 0;
+  const label = s.moneyGroupTitle + " · " + s.itemsCount(count) +
+    (totalPrice > 0 ? ` · ${s.priceEstimated} ${formatSilver(totalPrice)}` : "");
+  div.textContent = (moneyCollapsed ? "▸ " : "▾ ") + label;
+  div.addEventListener("click", () => {
+    moneyCollapsed = !moneyCollapsed;
+    saveMoneyCollapsed();
+    paintGather();
+  });
+  return div;
+}
+
+function buildGatherRow(entry) {
+  const s = t();
+  const done = checkedIds.has(entry.id);
+  const row = document.createElement("div");
+  row.className = "gv-row";
+  row.dataset.item = entry.id;
+
+  const check = document.createElement("button");
+  check.type = "button";
+  check.className = "gv-check" + (done ? " checked" : "");
+  check.textContent = done ? "✓" : "";
+  row.appendChild(check);
+
+  if (entry.item.icon) {
+    const icon = document.createElement("img");
+    icon.className = "row-icon";
+    icon.src = entry.item.icon;
+    icon.alt = "";
+    row.appendChild(icon);
+  }
+
+  const textWrap = document.createElement("div");
+  textWrap.className = "gv-row-text";
+  const nameEl = document.createElement("div");
+  nameEl.className = "gv-row-name" + (done ? " done" : "");
+  nameEl.textContent = entry.group ? substituteGroupName(entry.group) : nameFor(entry.node).primary;
+  textWrap.appendChild(nameEl);
+  if (entry.group) {
+    const altLine = document.createElement("div");
+    altLine.className = "gv-row-src";
+    altLine.textContent = entry.group.members.map((m) => nameFor(getItem(m.id)).primary).join(" / ");
+    textWrap.appendChild(altLine);
+  } else {
+    const srcEl = document.createElement("div");
+    srcEl.className = "gv-row-src";
+    srcEl.textContent = (lang === "tr" ? entry.node.source_tr : entry.node.source_en) || "";
+    textWrap.appendChild(srcEl);
+  }
+  if (entry.price) {
+    const priceEl = document.createElement("div");
+    priceEl.className = "gv-row-price";
+    priceEl.textContent = `${s.priceEstimated} ${formatSilver(entry.price * entry.effMissing)}`;
+    textWrap.appendChild(priceEl);
+  }
+  row.appendChild(textWrap);
+
+  const qtyWrap = document.createElement("div");
+  qtyWrap.className = "gv-row-qty";
+  const big = document.createElement("div");
+  big.className = "q-big";
+  big.style.color = done ? "var(--color-dim-2)" : "var(--color-accent)";
+  big.textContent = done ? "✓" : formatQty(entry.effMissing);
+  const of = document.createElement("div");
+  of.className = "q-of";
+  of.textContent = `${formatQty(entry.effHave)} / ${formatQty(entry.node.required)}`;
+  qtyWrap.appendChild(big);
+  qtyWrap.appendChild(of);
+  row.appendChild(qtyWrap);
+
+  return row;
 }
 
 function paintGather() {
@@ -1382,84 +2081,55 @@ function paintGather() {
     return;
   }
   const { primary } = nameFor(getItem(model.selectedId));
-  const raws = Object.values(model.results).filter((n) => n.isRaw && n.missing > 0);
-  sub.textContent = s.gatherSubFor(primary, model.targetQty, raws.length);
-
-  const groups = [
-    { key: "gather", title: s.groupGather, nodes: raws.filter((n) => !looksPurchased(lang === "tr" ? n.source_tr : n.source_en)) },
-    { key: "buy", title: s.groupBuy, nodes: raws.filter((n) => looksPurchased(lang === "tr" ? n.source_tr : n.source_en)) }
-  ].filter((g) => g.nodes.length);
-
-  let totalCost = 0;
-  const copyLines = [];
-
-  groups.forEach((g) => {
-    const gh = document.createElement("div");
-    gh.className = "gv-group-head";
-    const gt = document.createElement("span");
-    gt.className = "g-title";
-    gt.textContent = g.title;
-    const gm = document.createElement("span");
-    gm.className = "g-meta";
-    gm.textContent = s.itemsCount(g.nodes.length);
-    gh.appendChild(gt);
-    gh.appendChild(gm);
-    gv.appendChild(gh);
-
-    g.nodes.forEach((node) => {
-      const item = getItem(node.id);
-      const done = checkedIds.has(node.id);
-      const row = document.createElement("div");
-      row.className = "gv-row";
-      row.dataset.item = node.id;
-
-      const check = document.createElement("button");
-      check.type = "button";
-      check.className = "gv-check" + (done ? " checked" : "");
-      check.textContent = done ? "✓" : "";
-      row.appendChild(check);
-
-      if (item.icon) {
-        const icon = document.createElement("img");
-        icon.className = "row-icon";
-        icon.src = item.icon;
-        icon.alt = "";
-        row.appendChild(icon);
-      }
-
-      const textWrap = document.createElement("div");
-      textWrap.className = "gv-row-text";
-      const nameEl = document.createElement("div");
-      nameEl.className = "gv-row-name" + (done ? " done" : "");
-      nameEl.textContent = nameFor(node).primary;
-      const srcEl = document.createElement("div");
-      srcEl.className = "gv-row-src";
-      srcEl.textContent = (lang === "tr" ? node.source_tr : node.source_en) || "";
-      textWrap.appendChild(nameEl);
-      textWrap.appendChild(srcEl);
-      row.appendChild(textWrap);
-
-      const qtyWrap = document.createElement("div");
-      qtyWrap.className = "gv-row-qty";
-      const big = document.createElement("div");
-      big.className = "q-big";
-      big.style.color = done ? "var(--color-dim-2)" : "var(--color-accent)";
-      big.textContent = done ? "✓" : String(node.missing);
-      const of = document.createElement("div");
-      of.className = "q-of";
-      of.textContent = `${node.have} / ${node.required}`;
-      qtyWrap.appendChild(big);
-      qtyWrap.appendChild(of);
-      row.appendChild(qtyWrap);
-
-      gv.appendChild(row);
-
-      const price = parseSilverPrice(lang === "tr" ? node.source_tr : node.source_en);
-      if (price && !done) totalCost += price * node.missing;
-
-      copyLines.push(`${done ? "[x]" : "[ ]"} ${nameFor(node).primary} — ${node.missing}/${node.required}`);
-    });
+  const entries = buildGatherEntries(model);
+  entries.forEach((entry) => {
+    entry.item = getItem(entry.id);
+    const source = lang === "tr" ? entry.node.source_tr : entry.node.source_en;
+    // DATA.md §2: item.price varsa gerçek TAHMİNİ fiyat kullanılır; yoksa
+    // eski metin-içi kaba tahmine (parseSilverPrice) düşülür.
+    entry.price = typeof entry.item.price === "number" ? entry.item.price : parseSilverPrice(source);
+    entry.unlimited = !!entry.item.unlimited;
+    entry.purchased = looksPurchased(source) || typeof entry.item.price === "number";
   });
+  sub.textContent = s.gatherSubFor(primary, model.targetQty, entries.length);
+
+  const moneyEntries = entries.filter((e) => e.unlimited);
+  const gatherEntries = entries.filter((e) => !e.unlimited && !e.purchased);
+  const buyEntries = entries.filter((e) => !e.unlimited && e.purchased);
+  const byPriceDesc = (a, b) => (b.price || 0) - (a.price || 0);
+  gatherEntries.sort((a, b) => b.effMissing - a.effMissing);
+  buyEntries.sort(byPriceDesc);
+  moneyEntries.sort(byPriceDesc);
+
+  const copyLines = [];
+  let totalCost = 0;
+
+  function renderGroup(title, list) {
+    if (!list.length) return;
+    const groupTotal = list.reduce((sum, e) => sum + (e.price ? e.price * e.effMissing : 0), 0);
+    gv.appendChild(buildGatherGroupHeader(title, list.length, groupTotal));
+    list.forEach((entry) => {
+      gv.appendChild(buildGatherRow(entry));
+      if (entry.price && !checkedIds.has(entry.id)) totalCost += entry.price * entry.effMissing;
+      const label = entry.group ? substituteGroupName(entry.group) : nameFor(entry.node).primary;
+      copyLines.push(`${checkedIds.has(entry.id) ? "[x]" : "[ ]"} ${label} — ${formatQty(entry.effMissing)}/${formatQty(entry.node.required)}`);
+    });
+  }
+
+  renderGroup(s.groupGather, gatherEntries);
+  renderGroup(s.groupBuy, buyEntries);
+
+  if (moneyEntries.length) {
+    const moneyTotal = moneyEntries.reduce((sum, e) => sum + (e.price ? e.price * e.effMissing : 0), 0);
+    gv.appendChild(buildMoneyDivider(moneyEntries.length, moneyTotal));
+    if (!moneyCollapsed) {
+      moneyEntries.forEach((entry) => {
+        gv.appendChild(buildGatherRow(entry));
+        const label = entry.group ? substituteGroupName(entry.group) : nameFor(entry.node).primary;
+        copyLines.push(`${checkedIds.has(entry.id) ? "[x]" : "[ ]"} ${label} — ${formatQty(entry.effMissing)}/${formatQty(entry.node.required)}`);
+      });
+    }
+  }
 
   copyBtn.addEventListener("click", () => {
     const text = copyLines.join("\n");
@@ -1476,13 +2146,23 @@ function paintGather() {
     label.textContent = s.costLabel;
     const value = document.createElement("span");
     value.className = "gc-value";
-    value.textContent = `${Math.round(totalCost).toLocaleString(lang === "tr" ? "tr-TR" : "en-US")} ${s.silverUnit}`;
+    value.textContent = formatSilver(totalCost);
     costRow.appendChild(label);
     costRow.appendChild(value);
     gv.appendChild(costRow);
   }
 
-  if (!groups.length) {
+  // DATA.md §2: `priceUpdated` tek yerde yazılır — herhangi bir kalemde
+  // varsa (ilk bulunan) altta tarih notu düşer, yoksa hiçbir şey görünmez.
+  const withDate = entries.find((e) => e.item.priceUpdated);
+  if (withDate) {
+    const dateNote = document.createElement("div");
+    dateNote.className = "gv-price-date";
+    dateNote.textContent = s.priceUpdatedNote(withDate.item.priceUpdated);
+    gv.appendChild(dateNote);
+  }
+
+  if (!gatherEntries.length && !buyEntries.length && !moneyEntries.length) {
     const noResults = document.createElement("div");
     noResults.className = "no-results";
     noResults.textContent = s.noResults;
@@ -1563,13 +2243,26 @@ function applyStaticText() {
   document.getElementById("masteryGroup").style.display = skill === "alchemy" ? "" : "none";
   document.getElementById("targetEditorClose").textContent = s.calcBtn;
 
-  document.getElementById("globalSearch").placeholder = drawerOpen ? s.drawerSearchPlaceholder : s.searchPlaceholderGlobal;
+  document.getElementById("globalSearch").placeholder = s.searchPlaceholderGlobal;
   document.querySelector('[data-view="funnel"]').textContent = s.viewFunnel;
   document.querySelector('[data-view="table"]').textContent = s.viewTable;
   document.getElementById("onlyMissingBtn").textContent = s.onlyMissingBtn;
   document.getElementById("gatherBtn").textContent = s.gatherBtn;
   document.getElementById("stockDrawerBtn").textContent = s.stockDrawerBtn;
   document.getElementById("resetStockBtn").textContent = s.resetStock;
+  document.getElementById("sortResetBtn").textContent = s.sortResetBtn;
+  const countMoneyBtn = document.getElementById("countMoneyBtn");
+  countMoneyBtn.textContent = s.countMoneyBtn;
+  countMoneyBtn.classList.toggle("btn-primary", countMoney);
+
+  const drawerSearchEl = document.getElementById("drawerSearch");
+  if (drawerSearchEl) drawerSearchEl.placeholder = s.drawerSearchPlaceholder;
+  const chipMissing = document.querySelector('#drawerChips [data-chip="missing"]');
+  if (chipMissing) chipMissing.textContent = s.drawerFilterMissing;
+  const chipRaw = document.querySelector('#drawerChips [data-chip="raw"]');
+  if (chipRaw) chipRaw.textContent = s.drawerFilterRaw;
+  const chipEntered = document.querySelector('#drawerChips [data-chip="entered"]');
+  if (chipEntered) chipEntered.textContent = s.drawerFilterEntered;
 
   document.getElementById("legendMissing").textContent = s.legendMissing;
   document.getElementById("legendOk").textContent = s.legendOk;
@@ -1641,6 +2334,19 @@ function scheduleStockCommit() {
   }, 150);
 }
 
+// Blur anında (bekleyen debounce varsa iptal edip) HEMEN commit + repaint —
+// SPEC (1).md §2: satırın blok konumu (eksik/tamamlandı) input odaktan
+// çıkar çıkmaz gerçek haline oturmalı, 150ms'lik debounce'u beklememeli.
+function flushStockCommit() {
+  if (stockCommitTimer) {
+    clearTimeout(stockCommitTimer);
+    stockCommitTimer = null;
+  }
+  saveStock();
+  saveStockHigh();
+  repaint();
+}
+
 function handleStockInput(e) {
   const isBase = e.target.classList.contains("stock-field");
   const isHigher = e.target.classList.contains("stock-field-higher");
@@ -1650,6 +2356,137 @@ function handleStockInput(e) {
   if (isHigher) stockHigh[id] = val;
   else stock[id] = val;
   scheduleStockCommit();
+}
+
+// SPEC (1).md §9: geri al kaydı "tek işlem = tek kayıt" olacak şekilde
+// odaklanma anındaki değeri hatırlar, blur'da değişmişse tek bir undo kaydı
+// oluşturur (her tuş vuruşunda değil).
+function handleStockFocusIn(e) {
+  const isBase = e.target.classList && e.target.classList.contains("stock-field");
+  const isHigher = e.target.classList && e.target.classList.contains("stock-field-higher");
+  if (!isBase && !isHigher) return;
+  const id = e.target.dataset.item;
+  const field = isHigher ? "stockHigh" : "stock";
+  stockFocusValue = { id, field, from: (field === "stockHigh" ? stockHigh[id] : stock[id]) || 0 };
+}
+
+function handleStockFocusOut(e) {
+  const isBase = e.target.classList && e.target.classList.contains("stock-field");
+  const isHigher = e.target.classList && e.target.classList.contains("stock-field-higher");
+  if (!isBase && !isHigher) return;
+  const id = e.target.dataset.item;
+  const field = isHigher ? "stockHigh" : "stock";
+  const to = (field === "stockHigh" ? stockHigh[id] : stock[id]) || 0;
+  if (stockFocusValue && stockFocusValue.id === id && stockFocusValue.field === field && stockFocusValue.from !== to) {
+    pushUndo({ type: "single", id, field, from: stockFocusValue.from, to, at: Date.now() });
+  }
+  stockFocusValue = null;
+  flushStockCommit();
+}
+
+// ── Geri al / yinele — Ctrl+Z / Ctrl+Shift+Z (SPEC (1).md §9) ───────────
+
+function pushUndo(entry) {
+  undoStack.push(entry);
+  if (undoStack.length > 50) undoStack.shift();
+  saveUndoStack();
+  redoStack = [];
+}
+
+function applyUndoEntry(entry, direction) {
+  const items = entry.type === "batch" ? entry.items : [entry];
+  items.forEach((it) => {
+    const val = direction === "undo" ? it.from : it.to;
+    if (it.field === "stockHigh") stockHigh[it.id] = val;
+    else stock[it.id] = val;
+  });
+  saveStock();
+  saveStockHigh();
+}
+
+function hideUndoToast() {
+  const toast = document.getElementById("undoToast");
+  if (toast) toast.hidden = true;
+  if (undoToastTimer) {
+    clearTimeout(undoToastTimer);
+    undoToastTimer = null;
+  }
+}
+
+function showUndoToast(entry) {
+  const toast = document.getElementById("undoToast");
+  if (!toast) return;
+  if (undoToastTimer) clearTimeout(undoToastTimer);
+  toast.innerHTML = "";
+  const s = t();
+
+  const msg = document.createElement("span");
+  msg.className = "ut-msg";
+  msg.textContent = s.undoRestored;
+  toast.appendChild(msg);
+
+  const affectedIds = entry.type === "batch" ? entry.items.map((it) => it.id) : [entry.id];
+  const visibleEls = Array.from(document.querySelectorAll("[data-item]"))
+    .filter((el) => affectedIds.includes(el.dataset.item));
+
+  if (visibleEls.length) {
+    visibleEls.forEach((el) => {
+      el.classList.add("just-restored");
+      setTimeout(() => el.classList.remove("just-restored"), 600);
+    });
+  } else if (affectedIds.length === 1 && (RECIPES.items[affectedIds[0]])) {
+    const link = document.createElement("a");
+    link.href = "#";
+    link.className = "ut-goto";
+    link.textContent = s.gotoRow;
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      focusChain = [affectedIds[0]];
+      setSearch("");
+      hideUndoToast();
+      repaint();
+    });
+    toast.appendChild(link);
+  }
+
+  const redoBtn = document.createElement("button");
+  redoBtn.type = "button";
+  redoBtn.className = "ut-redo";
+  redoBtn.textContent = s.redoBtn;
+  redoBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  redoBtn.addEventListener("click", redo);
+  toast.appendChild(redoBtn);
+
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "ut-close";
+  closeBtn.textContent = "✕";
+  closeBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  closeBtn.addEventListener("click", hideUndoToast);
+  toast.appendChild(closeBtn);
+
+  toast.hidden = false;
+  undoToastTimer = setTimeout(hideUndoToast, 3000);
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  const entry = undoStack.pop();
+  saveUndoStack();
+  redoStack.push(entry);
+  applyUndoEntry(entry, "undo");
+  repaint();
+  showUndoToast(entry);
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  const entry = redoStack.pop();
+  applyUndoEntry(entry, "redo");
+  undoStack.push(entry);
+  saveUndoStack();
+  repaint();
+  showUndoToast(entry);
 }
 
 // ── Odaklanma / genişletme tıklama mantığı ──────────────────────────────
@@ -1764,6 +2601,13 @@ function init() {
     repaint();
   });
 
+  document.getElementById("countMoneyBtn").addEventListener("click", (e) => {
+    countMoney = !countMoney;
+    saveCountMoney();
+    e.currentTarget.classList.toggle("btn-primary", countMoney);
+    repaint();
+  });
+
   document.getElementById("gatherBtn").addEventListener("click", () => {
     activeScreen = activeScreen === "gather" ? "main" : "gather";
     repaint();
@@ -1773,12 +2617,61 @@ function init() {
   document.getElementById("drawerClose").addEventListener("click", closeDrawer);
   document.getElementById("drawerBackdrop").addEventListener("click", closeDrawer);
   document.getElementById("stockDrawerList").addEventListener("input", handleStockInput);
+  document.getElementById("stockDrawerList").addEventListener("focusin", handleStockFocusIn);
+  document.getElementById("stockDrawerList").addEventListener("focusout", handleStockFocusOut);
+  document.getElementById("stockDrawerList").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    if (!e.target.classList || !e.target.classList.contains("stock-field")) return;
+    e.preventDefault();
+    focusNextMissingDrawerInput(e.target.dataset.item);
+  });
+
+  document.getElementById("drawerSearch").addEventListener("input", (e) => setDrawerSearch(e.target.value));
+  document.getElementById("drawerSearchClear").addEventListener("click", () => {
+    setDrawerSearch("");
+    document.getElementById("drawerSearch").focus();
+  });
+  document.getElementById("drawerSearch").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const first = document.querySelector("#stockDrawerList .stock-field");
+    if (first) { first.focus(); first.select(); }
+  });
+  document.getElementById("drawerChips").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-chip]");
+    if (!btn) return;
+    drawerChip = drawerChip === btn.dataset.chip ? null : btn.dataset.chip;
+    updateDrawerChipsUI();
+    paintDrawer();
+  });
 
   document.getElementById("resetStockBtn").addEventListener("click", () => {
+    const items = [];
+    Object.keys(stock).forEach((id) => { if (stock[id]) items.push({ id, field: "stock", from: stock[id], to: 0 }); });
+    Object.keys(stockHigh).forEach((id) => { if (stockHigh[id]) items.push({ id, field: "stockHigh", from: stockHigh[id], to: 0 }); });
+    if (items.length) pushUndo({ type: "batch", items, at: Date.now() });
     stock = {};
     stockHigh = {};
     saveStock();
     saveStockHigh();
+    repaint();
+  });
+
+  document.getElementById("sortResetBtn").addEventListener("click", () => {
+    tableSortOverride = null;
+    saveSortOverride();
+    repaint();
+  });
+  document.getElementById("tableHead").addEventListener("click", (e) => {
+    const th = e.target.closest(".th-sortable");
+    if (!th) return;
+    const col = th.dataset.sortCol;
+    if (tableSortOverride && tableSortOverride.col === col) {
+      tableSortOverride = tableSortOverride.dir === "desc" ? { col, dir: "asc" } : null;
+    } else {
+      tableSortOverride = { col, dir: "desc" };
+    }
+    saveSortOverride();
     repaint();
   });
 
@@ -1799,8 +2692,12 @@ function init() {
 
   document.getElementById("funnelView").addEventListener("click", (e) => handleRowClick(e, "funnel"));
   document.getElementById("funnelView").addEventListener("input", handleStockInput);
+  document.getElementById("funnelView").addEventListener("focusin", handleStockFocusIn);
+  document.getElementById("funnelView").addEventListener("focusout", handleStockFocusOut);
   document.getElementById("tableRows").addEventListener("click", (e) => handleRowClick(e, "table"));
   document.getElementById("tableRows").addEventListener("input", handleStockInput);
+  document.getElementById("tableRows").addEventListener("focusin", handleStockFocusIn);
+  document.getElementById("tableRows").addEventListener("focusout", handleStockFocusOut);
   document.getElementById("tierFilter").addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-tier]");
     if (!btn) return;
@@ -1820,6 +2717,8 @@ function init() {
       checkedIds.add(id);
       const node = model.results[id];
       if (node) {
+        const from = stock[id] || 0;
+        if (from !== node.required) pushUndo({ type: "single", id, field: "stock", from, to: node.required, at: Date.now() });
         stock[id] = node.required;
         saveStock();
       }
@@ -1828,21 +2727,34 @@ function init() {
     paintGather();
   });
 
-  // Klavye kısayolları: "/" arama kutusuna odaklan, Esc temizle+bırak,
-  // Enter ilk sonuca odaklan.
+  // Klavye kısayolları: "/" arama kutusuna odaklan (çekmece açıksa ÇEKMECENİN
+  // kendi aramasına), Esc temizle+bırak, Enter ilk sonuca odaklan, Ctrl+Z /
+  // Ctrl+Shift+Z geri al / yinele (bir metin alanı odaktaysa tarayıcının
+  // kendi geri alma davranışına karışılmaz — SPEC (1).md §9).
   document.addEventListener("keydown", (e) => {
     const active = document.activeElement;
     const inField = active && /^(INPUT|SELECT|TEXTAREA)$/.test(active.tagName);
+    const isUndoKey = (e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "z" || e.key === "Z");
+    if (isUndoKey) {
+      if (inField) return;
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+      return;
+    }
     if (e.key === "/" && !inField) {
       e.preventDefault();
-      document.getElementById("globalSearch").focus();
+      if (drawerOpen) document.getElementById("drawerSearch").focus();
+      else document.getElementById("globalSearch").focus();
     } else if (e.key === "Escape" && active && active.id === "globalSearch") {
       setSearch("");
       active.blur();
+    } else if (e.key === "Escape" && active && active.id === "drawerSearch") {
+      if (drawerQuery) setDrawerSearch("");
+      else closeDrawer();
     } else if (e.key === "Enter" && active && active.id === "globalSearch") {
       const model = computeRenderModel();
       if (model && model.query) {
-        const firstMatch = model.sections.flatMap((s) => s.nodes)[0];
+        const firstMatch = model.sections.flatMap((s) => [...s.missingNodes, ...s.doneNodes])[0];
         if (firstMatch) {
           focusChain = [firstMatch.id];
           setSearch("");
