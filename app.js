@@ -16,6 +16,8 @@ const MASTERY_KEY = "bdohelper_mastery_v1";
 const SKILL_KEY = "bdohelper_skill_v1";
 const SELECTED_ITEM_KEY = "bdohelper_selected_item_v1";
 const TARGET_QTY_KEY = "bdohelper_target_qty_v1";
+const PLANS_KEY = "bdohelper_plans_v1";
+const ACTIVE_PLAN_KEY = "bdohelper_active_plan_v1";
 const VIEW_KEY = "bdohelper_view_v1";
 const EXPANDED_KEY = "bdohelper_expanded_v1";
 const CHECKED_KEY = "bdohelper_checked_v1";
@@ -66,6 +68,14 @@ let lang = loadLang();
 let mastery = loadMastery();
 let skill = loadSkill();
 let selectedItems = loadSelectedItems();
+// Üretim planları: her biri kendi meslek/ürün/adet/mastery kombinasyonunu
+// tutan, üst bardaki sekmelerle değiştirilen bağımsız hedefler. Stok/envanter
+// tüm planlar arasında ortaktır (bkz. STORAGE_KEY) — sadece hedef değişir.
+let plans = loadPlans();
+let activePlanId = loadActivePlanId();
+ensurePlans();
+skill = getActivePlan().skill;
+mastery = getActivePlan().mastery;
 // Odak zinciri: sırayla tıklanan maddeler. Bir madde, o an odaklanılmış
 // maddenin ALTINDAKİ bir malzemeyse zincire eklenir (kapsam daha da daralır,
 // ör. Elixir of Wind -> Wise Man's Blood); değilse zincir o maddeyle sıfırdan
@@ -201,6 +211,68 @@ function saveSelectedItem(sk, itemId) {
   } catch (e) {
     /* no-op */
   }
+}
+
+function loadPlans() {
+  try {
+    const raw = localStorage.getItem(PLANS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function savePlans() {
+  try {
+    localStorage.setItem(PLANS_KEY, JSON.stringify(plans));
+  } catch (e) {
+    /* no-op */
+  }
+}
+
+function loadActivePlanId() {
+  try {
+    return localStorage.getItem(ACTIVE_PLAN_KEY) || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveActivePlanId() {
+  try {
+    localStorage.setItem(ACTIVE_PLAN_KEY, activePlanId);
+  } catch (e) {
+    /* no-op */
+  }
+}
+
+function generatePlanId() {
+  return "plan_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+// İlk çalıştırmada (veya eski, tek-hedefli sürümden gelen kullanıcılarda)
+// plans boşsa, o ana kadarki tek global hedeften bir ilk plan türetilir —
+// böylece güncelleme sonrası kimse mevcut hedefini kaybetmez.
+function ensurePlans() {
+  if (!plans.length) {
+    plans = [{
+      id: generatePlanId(),
+      skill: skill,
+      itemId: selectedItems[skill] || null,
+      qty: loadTargetQty(),
+      mastery: mastery
+    }];
+    savePlans();
+  }
+  if (!activePlanId || !plans.some((p) => p.id === activePlanId)) {
+    activePlanId = plans[0].id;
+    saveActivePlanId();
+  }
+}
+
+function getActivePlan() {
+  return plans.find((p) => p.id === activePlanId) || plans[0];
 }
 
 function loadTargetQty() {
@@ -370,6 +442,9 @@ const STRINGS = {
     masteryHint: (pct) => (pct > 0 ? `+%${formatPct(pct)} max şansı` : ""),
     calcBtn: "HESAPLA",
     noTarget: "Hedef seç",
+    newPlanTab: "Yeni üretim planı",
+    closePlanTab: "Planı kapat",
+    newPlanLabel: "Yeni Plan",
     progressLabel: "İLERLEME",
     progressSub: (done, total) => `${done} / ${total} malzeme tamam`,
     searchPlaceholderGlobal: "Malzeme veya ürün ara — / ile odaklan",
@@ -468,6 +543,9 @@ const STRINGS = {
     masteryHint: (pct) => (pct > 0 ? `+${formatPct(pct)}% max chance` : ""),
     calcBtn: "CALCULATE",
     noTarget: "Pick a target",
+    newPlanTab: "New production plan",
+    closePlanTab: "Close plan",
+    newPlanLabel: "New Plan",
     progressLabel: "PROGRESS",
     progressSub: (done, total) => `${done} / ${total} materials done`,
     searchPlaceholderGlobal: "Search materials or products — press / to focus",
@@ -955,6 +1033,23 @@ function computeRenderModel() {
   const itemSelect = document.getElementById("itemSelect");
   const targetQty = parseInt(document.getElementById("targetQty").value, 10) || 0;
   const selectedId = itemSelect.value;
+
+  // Malzeme aramasıyla eşleşen tek seçenek otomatik seçildiğinde (bkz.
+  // filterSelectOptions) <select>'in "change" olayı tetiklenmez, bu yüzden
+  // aktif planın itemId/qty alanlarını burada — her repaint'te — DOM'daki
+  // gerçek değerle senkron tutuyoruz (tab etiketi bunlara bağlı).
+  const activePlan = getActivePlan();
+  if (activePlan) {
+    if (selectedId && activePlan.itemId !== selectedId) {
+      activePlan.itemId = selectedId;
+      savePlans();
+    }
+    if (targetQty > 0 && activePlan.qty !== targetQty) {
+      activePlan.qty = targetQty;
+      savePlans();
+    }
+  }
+
   if (!selectedId || targetQty <= 0) return null;
 
   const masteryPct = skill === "alchemy" ? getMasteryBonusPercent(mastery) : 0;
@@ -1791,6 +1886,7 @@ function repaint() {
   }
   document.getElementById("gatherView").hidden = true;
   const model = computeRenderModel();
+  renderPlanTabs();
   paintTargetBar(model);
   document.getElementById("funnelView").hidden = view !== "funnel";
   document.getElementById("tableView").hidden = view !== "table";
@@ -2337,20 +2433,140 @@ function setLang(newLang) {
   applyStaticText();
   populateSelect(true);
   document.getElementById("itemSearch").value = "";
+  document.getElementById("planTabsAdd").title = t().newPlanTab;
+  renderPlanTabs();
   repaint();
 }
 
 function setSkill(newSkill) {
   if (newSkill !== "alchemy" && newSkill !== "cooking") return;
-  skill = newSkill;
+  const plan = getActivePlan();
+  plan.skill = newSkill;
+  applyPlanToUI(plan);
+}
+
+// ── Üretim planı sekmeleri ───────────────────────────────────────────────
+
+// Bir planı ekrana uygular: meslek/ürün seçici/adet/mastery alanlarını o
+// planın kayıtlı değerleriyle doldurur ve yeniden hesaplar. Sekme değişimi,
+// meslek değişimi ve yeni plan oluşturma hep bu tek yoldan geçer.
+function applyPlanToUI(plan) {
+  skill = plan.skill;
   saveSkill();
   applyStaticText();
   populateSelect(false);
+
+  const itemSelect = document.getElementById("itemSelect");
+  if (plan.itemId && RECIPES.items[plan.itemId] && (RECIPES.items[plan.itemId].skill || "alchemy") === skill) {
+    itemSelect.value = plan.itemId;
+  }
+  plan.itemId = itemSelect.value || null;
   document.getElementById("itemSearch").value = "";
+
+  const qty = plan.qty > 0 ? plan.qty : 10;
+  plan.qty = qty;
+  document.getElementById("targetQty").value = qty;
+  saveTargetQty(qty);
+
+  mastery = plan.mastery || 0;
+  document.getElementById("masteryInput").value = mastery;
+  saveMastery();
+  updateMasteryHintText();
+
   focusChain = [];
   setSearch("");
   tableTierFilter = "all";
+  savePlans();
+  renderPlanTabs();
   repaint();
+}
+
+function switchToPlan(id) {
+  if (id === activePlanId) return;
+  const plan = plans.find((p) => p.id === id);
+  if (!plan) return;
+  activePlanId = id;
+  saveActivePlanId();
+  applyPlanToUI(plan);
+}
+
+function addPlan() {
+  const plan = {
+    id: generatePlanId(),
+    skill: skill,
+    itemId: null,
+    qty: 10,
+    mastery: skill === "alchemy" ? mastery : 0
+  };
+  plans.push(plan);
+  activePlanId = plan.id;
+  saveActivePlanId();
+  savePlans();
+  applyPlanToUI(plan);
+  openTargetEditor();
+  document.getElementById("itemSearch").focus();
+}
+
+function closePlan(id) {
+  if (plans.length <= 1) return;
+  const idx = plans.findIndex((p) => p.id === id);
+  if (idx === -1) return;
+  const wasActive = id === activePlanId;
+  plans.splice(idx, 1);
+  savePlans();
+  if (wasActive) {
+    const next = plans[idx] || plans[idx - 1];
+    activePlanId = next.id;
+    saveActivePlanId();
+    applyPlanToUI(next);
+  } else {
+    renderPlanTabs();
+  }
+}
+
+function renderPlanTabs() {
+  const strip = document.getElementById("planTabs");
+  if (!strip) return;
+  const s = t();
+  strip.innerHTML = "";
+  plans.forEach((plan) => {
+    const tab = document.createElement("div");
+    tab.className = "plan-tab" + (plan.id === activePlanId ? " active" : "");
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-selected", plan.id === activePlanId ? "true" : "false");
+    tab.tabIndex = 0;
+
+    const item = plan.itemId ? getItem(plan.itemId) : null;
+    const label = document.createElement("span");
+    label.className = "plan-tab-label";
+    label.textContent = item ? nameFor(item).primary : s.newPlanLabel;
+    tab.appendChild(label);
+
+    const activate = () => switchToPlan(plan.id);
+    tab.addEventListener("click", activate);
+    tab.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        activate();
+      }
+    });
+
+    if (plans.length > 1) {
+      const closeBtn = document.createElement("button");
+      closeBtn.type = "button";
+      closeBtn.className = "plan-tab-close";
+      closeBtn.title = s.closePlanTab;
+      closeBtn.setAttribute("aria-label", s.closePlanTab);
+      closeBtn.textContent = "✕";
+      closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        closePlan(plan.id);
+      });
+      tab.appendChild(closeBtn);
+    }
+
+    strip.appendChild(tab);
+  });
 }
 
 function openTargetEditor() {
@@ -2574,21 +2790,38 @@ function handleRowClick(e, container) {
 // ── init ──────────────────────────────────────────────────────────────
 
 function init() {
+  const activePlan = getActivePlan();
   document.getElementById("masteryInput").value = mastery;
-  document.getElementById("targetQty").value = loadTargetQty();
+  document.getElementById("targetQty").value = activePlan.qty > 0 ? activePlan.qty : 10;
+  saveTargetQty(activePlan.qty);
   applyStaticText();
   populateSelect(false);
+  const itemSelect = document.getElementById("itemSelect");
+  if (activePlan.itemId && RECIPES.items[activePlan.itemId] &&
+    (RECIPES.items[activePlan.itemId].skill || "alchemy") === skill) {
+    itemSelect.value = activePlan.itemId;
+  }
+  activePlan.itemId = itemSelect.value || null;
+  savePlans();
   updateMasteryHintText();
+  renderPlanTabs();
 
   document.getElementById("itemSelect").addEventListener("change", (e) => {
     saveSelectedItem(skill, e.target.value);
+    getActivePlan().itemId = e.target.value;
+    savePlans();
+    renderPlanTabs();
     focusChain = [];
     setSearch("");
     repaint();
   });
   document.getElementById("targetQty").addEventListener("input", (e) => {
     const qty = parseInt(e.target.value, 10);
-    if (Number.isFinite(qty) && qty > 0) saveTargetQty(qty);
+    if (Number.isFinite(qty) && qty > 0) {
+      saveTargetQty(qty);
+      getActivePlan().qty = qty;
+      savePlans();
+    }
     repaint();
   });
   document.getElementById("itemSearch").addEventListener("input", (e) => {
@@ -2597,9 +2830,13 @@ function init() {
   document.getElementById("masteryInput").addEventListener("input", (e) => {
     mastery = Math.max(0, Math.min(3000, parseInt(e.target.value, 10) || 0));
     saveMastery();
+    getActivePlan().mastery = mastery;
+    savePlans();
     updateMasteryHintText();
     repaint();
   });
+  document.getElementById("planTabsAdd").title = t().newPlanTab;
+  document.getElementById("planTabsAdd").addEventListener("click", addPlan);
 
   document.querySelectorAll(".lang-btn").forEach((btn) => {
     btn.addEventListener("click", () => setLang(btn.dataset.lang));
