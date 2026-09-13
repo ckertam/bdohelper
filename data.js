@@ -5147,6 +5147,21 @@ const RECIPES = {
     "name_tr": "Ateş Tanesi Çiçeği",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_5446", "item_5466"],
+    "icon": "icons/item_5403.webp"
+  },
+  "item_5446": {
+    "name_en": "High-quality Fire Flake Flower",
+    "name_tr": "Yüksek Kalite Ateş Tanesi Çiçeği",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5403.webp"
+  },
+  "item_5466": {
+    "name_en": "Special Fire Flake Flower",
+    "name_tr": "Özel Ateş Tanesi Çiçeği",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5403.webp"
   },
   "item_5001": {
@@ -5168,6 +5183,21 @@ const RECIPES = {
     "name_tr": "Gündoğumu Bitkisi",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_5444", "item_5464"],
+    "icon": "icons/item_5401.webp"
+  },
+  "item_5444": {
+    "name_en": "High-quality Sunrise Herb",
+    "name_tr": "Yüksek Kalite Gündoğumu Bitkisi",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5401.webp"
+  },
+  "item_5464": {
+    "name_en": "Special Sunrise Herb",
+    "name_tr": "Özel Gündoğumu Bitkisi",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5401.webp"
   },
   "item_6656": {
@@ -5187,6 +5217,21 @@ const RECIPES = {
   "item_5407": {
     "name_en": "Fortune Teller Mushroom",
     "name_tr": "Kahin Mantar",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": ["item_5450", "item_5470"],
+    "icon": "icons/item_5407.webp"
+  },
+  "item_5450": {
+    "name_en": "High-quality Fortune Teller Mushroom",
+    "name_tr": "Yüksek Kalite Kahin Mantar",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5407.webp"
+  },
+  "item_5470": {
+    "name_en": "Special Fortune Teller Mushroom",
+    "name_tr": "Özel Kahin Mantar",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_5407.webp"
@@ -5217,11 +5262,41 @@ const RECIPES = {
     "name_tr": "Hayalet Mantarı",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_5457", "item_5477"],
+    "icon": "icons/item_5414.webp"
+  },
+  "item_5457": {
+    "name_en": "High-quality Ghost Mushroom",
+    "name_tr": "Yüksek Kalite Hayalet Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5414.webp"
+  },
+  "item_5477": {
+    "name_en": "Special Ghost Mushroom",
+    "name_tr": "Özel Hayalet Mantarı",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5414.webp"
   },
   "item_5415": {
     "name_en": "Fog Mushroom",
     "name_tr": "Sis Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": ["item_5458", "item_5478"],
+    "icon": "icons/item_5415.webp"
+  },
+  "item_5458": {
+    "name_en": "High-quality Fog Mushroom",
+    "name_tr": "Yüksek Kalite Sis Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5415.webp"
+  },
+  "item_5478": {
+    "name_en": "Special Fog Mushroom",
+    "name_tr": "Özel Sis Mantarı",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_5415.webp"
@@ -5238,6 +5313,21 @@ const RECIPES = {
     "name_tr": "Kambur Mantar",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_5459", "item_5479"],
+    "icon": "icons/item_5416.webp"
+  },
+  "item_5459": {
+    "name_en": "High-quality Hump Mushroom",
+    "name_tr": "Yüksek Kalite Kambur Mantar",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5416.webp"
+  },
+  "item_5479": {
+    "name_en": "Special Hump Mushroom",
+    "name_tr": "Özel Kambur Mantar",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5416.webp"
   },
   "item_5004": {
@@ -5252,11 +5342,41 @@ const RECIPES = {
     "name_tr": "Ok Mantarı",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_5451", "item_5471"],
+    "icon": "icons/item_5408.webp"
+  },
+  "item_5451": {
+    "name_en": "High-quality Arrow Mushroom",
+    "name_tr": "Yüksek Kalite Ok Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5408.webp"
+  },
+  "item_5471": {
+    "name_en": "Special Arrow Mushroom",
+    "name_tr": "Özel Ok Mantarı",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5408.webp"
   },
   "item_5417": {
     "name_en": "Bluffer Mushroom",
     "name_tr": "Blöf Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": ["item_5460", "item_5480"],
+    "icon": "icons/item_5417.webp"
+  },
+  "item_5460": {
+    "name_en": "High-quality Bluffer Mushroom",
+    "name_tr": "Yüksek Kalite Blöf Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5417.webp"
+  },
+  "item_5480": {
+    "name_en": "Special Bluffer Mushroom",
+    "name_tr": "Özel Blöf Mantarı",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_5417.webp"
@@ -5287,6 +5407,21 @@ const RECIPES = {
     "name_tr": "Gümüş Açelya",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_5445", "item_5465"],
+    "icon": "icons/item_5402.webp"
+  },
+  "item_5445": {
+    "name_en": "High-quality Silver Azalea",
+    "name_tr": "Yüksek Kalite Gümüş Açelya",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5402.webp"
+  },
+  "item_5465": {
+    "name_en": "Special Silver Azalea",
+    "name_tr": "Özel Gümüş Açelya",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5402.webp"
   },
   "item_6213": {
@@ -5299,6 +5434,21 @@ const RECIPES = {
   "item_5418": {
     "name_en": "Ancient Mushroom",
     "name_tr": "Kadim Mantar",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": ["item_5461", "item_5481"],
+    "icon": "icons/item_5418.webp"
+  },
+  "item_5461": {
+    "name_en": "High-quality Ancient Mushroom",
+    "name_tr": "Yüksek Kalite Kadim Mantar",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5418.webp"
+  },
+  "item_5481": {
+    "name_en": "Special Ancient Mushroom",
+    "name_tr": "Özel Kadim Mantar",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_5418.webp"
@@ -5315,6 +5465,21 @@ const RECIPES = {
     "name_tr": "Cüce Mantarı",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_5452", "item_5472"],
+    "icon": "icons/item_5409.webp"
+  },
+  "item_5452": {
+    "name_en": "High-quality Dwarf Mushroom",
+    "name_tr": "Yüksek Kalite Cüce Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5409.webp"
+  },
+  "item_5472": {
+    "name_en": "Special Dwarf Mushroom",
+    "name_tr": "Özel Cüce Mantarı",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5409.webp"
   },
   "item_6214": {
@@ -5327,6 +5492,21 @@ const RECIPES = {
   "item_5419": {
     "name_en": "Amanita Mushroom",
     "name_tr": "Amanita Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": ["item_5462", "item_5482"],
+    "icon": "icons/item_5419.webp"
+  },
+  "item_5462": {
+    "name_en": "High-quality Amanita Mushroom",
+    "name_tr": "Yüksek Kalite Amanita Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5419.webp"
+  },
+  "item_5482": {
+    "name_en": "Special Amanita Mushroom",
+    "name_tr": "Özel Amanita Mantarı",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_5419.webp"
@@ -5343,6 +5523,21 @@ const RECIPES = {
     "name_tr": "Makarna Mantarı",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_5463", "item_5483"],
+    "icon": "icons/item_5420.webp"
+  },
+  "item_5463": {
+    "name_en": "High-quality Truffle Mushroom",
+    "name_tr": "Yüksek Kalite Makarna Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5420.webp"
+  },
+  "item_5483": {
+    "name_en": "Special Truffle Mushroom",
+    "name_tr": "Özel Makarna Mantarı",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5420.webp"
   },
   "item_5008": {
@@ -5355,6 +5550,21 @@ const RECIPES = {
   "item_5410": {
     "name_en": "Cloud Mushroom",
     "name_tr": "Bulut Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": ["item_5453", "item_5473"],
+    "icon": "icons/item_5410.webp"
+  },
+  "item_5453": {
+    "name_en": "High-quality Cloud Mushroom",
+    "name_tr": "Yüksek Kalite Bulut Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5410.webp"
+  },
+  "item_5473": {
+    "name_en": "Special Cloud Mushroom",
+    "name_tr": "Özel Bulut Mantarı",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_5410.webp"
@@ -5371,6 +5581,21 @@ const RECIPES = {
     "name_tr": "Gök Mantarı",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_5454", "item_5474"],
+    "icon": "icons/item_5411.webp"
+  },
+  "item_5454": {
+    "name_en": "High-quality Sky Mushroom",
+    "name_tr": "Yüksek Kalite Gök Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5411.webp"
+  },
+  "item_5474": {
+    "name_en": "Special Sky Mushroom",
+    "name_tr": "Özel Gök Mantarı",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5411.webp"
   },
   "item_5007": {
@@ -5383,6 +5608,21 @@ const RECIPES = {
   "item_5404": {
     "name_en": "Dry Mane Grass",
     "name_tr": "Kuru Yelken Otu",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": ["item_5447", "item_5467"],
+    "icon": "icons/item_5404.webp"
+  },
+  "item_5447": {
+    "name_en": "High-quality Dry Mane Grass",
+    "name_tr": "Yüksek Kalite Kuru Yelken Otu",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5404.webp"
+  },
+  "item_5467": {
+    "name_en": "Special Dry Mane Grass",
+    "name_tr": "Özel Kuru Yelken Otu",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_5404.webp"
@@ -5406,6 +5646,21 @@ const RECIPES = {
     "name_tr": "Kaplan Mantarı",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_5455", "item_5475"],
+    "icon": "icons/item_5412.webp"
+  },
+  "item_5455": {
+    "name_en": "High-quality Tiger Mushroom",
+    "name_tr": "Yüksek Kalite Kaplan Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5412.webp"
+  },
+  "item_5475": {
+    "name_en": "Special Tiger Mushroom",
+    "name_tr": "Özel Kaplan Mantarı",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5412.webp"
   },
   "item_5006": {
@@ -5418,6 +5673,21 @@ const RECIPES = {
   "item_5413": {
     "name_en": "Emperor Mushroom",
     "name_tr": "İmparator Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": ["item_5456", "item_5476"],
+    "icon": "icons/item_5413.webp"
+  },
+  "item_5456": {
+    "name_en": "High-quality Emperor Mushroom",
+    "name_tr": "Yüksek Kalite İmparator Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5413.webp"
+  },
+  "item_5476": {
+    "name_en": "Special Emperor Mushroom",
+    "name_tr": "Özel İmparator Mantarı",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_5413.webp"
@@ -5763,6 +6033,21 @@ const RECIPES = {
     "name_tr": "İpek Bal Otu",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_5448", "item_5468"],
+    "icon": "icons/item_5405.webp"
+  },
+  "item_5448": {
+    "name_en": "High-quality Silk Honey Grass",
+    "name_tr": "Yüksek Kalite İpek Bal Otu",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5405.webp"
+  },
+  "item_5468": {
+    "name_en": "Special Silk Honey Grass",
+    "name_tr": "Özel İpek Bal Otu",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5405.webp"
   },
   "item_15017": {
@@ -5887,6 +6172,21 @@ const RECIPES = {
   "item_5406": {
     "name_en": "Everlasting Herb",
     "name_tr": "Sonsuzluk Bitkisi",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": ["item_5449", "item_5469"],
+    "icon": "icons/item_5406.webp"
+  },
+  "item_5449": {
+    "name_en": "High-quality Everlasting Herb",
+    "name_tr": "Yüksek Kalite Sonsuzluk Bitkisi",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5406.webp"
+  },
+  "item_5469": {
+    "name_en": "Special Everlasting Herb",
+    "name_tr": "Özel Sonsuzluk Bitkisi",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_5406.webp"
@@ -6132,11 +6432,41 @@ const RECIPES = {
     "name_tr": "Kırmızı Benekli Amanita Mantarı",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_5554", "item_5555"],
+    "icon": "icons/item_5546.webp"
+  },
+  "item_5554": {
+    "name_en": "High-quality Red-spotted Amanita",
+    "name_tr": "Yüksek Kalite Kırmızı Benekli Amanita Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5546.webp"
+  },
+  "item_5555": {
+    "name_en": "Special Red-spotted Amanita",
+    "name_tr": "Özel Kırmızı Benekli Amanita Mantarı",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5546.webp"
   },
   "item_5550": {
     "name_en": "Dictyophora",
     "name_tr": "Bambu Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": ["item_5558", "item_5559"],
+    "icon": "icons/item_5550.webp"
+  },
+  "item_5558": {
+    "name_en": "High-quality Dictyophora",
+    "name_tr": "Yüksek Kalite Bambu Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5550.webp"
+  },
+  "item_5559": {
+    "name_en": "Special Dictyophora",
+    "name_tr": "Özel Bambu Mantarı",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_5550.webp"
@@ -11070,6 +11400,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_7703", "item_7704"],
     "icon": "icons/item_7702.webp"
   },
   "item_9063": {
@@ -11102,6 +11433,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_54005"],
     "icon": "icons/item_54004.webp"
   },
   "item_54005": {
@@ -11174,6 +11506,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_7323", "item_7335"],
     "icon": "icons/item_7301.webp"
   },
   "item_7908": {
@@ -11558,6 +11891,21 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_5556", "item_5557"],
+    "icon": "icons/item_5548.webp"
+  },
+  "item_5556": {
+    "name_en": "High-quality Mesima",
+    "name_tr": "Yüksek Kalite Mesima Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5548.webp"
+  },
+  "item_5557": {
+    "name_en": "Special Mesima",
+    "name_tr": "Özel Mesima Mantarı",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_5548.webp"
   },
   "item_5544": {
@@ -11565,6 +11913,21 @@ const RECIPES = {
     "name_tr": "Şanterel Mantarı",
     "tier": "raw",
     "skill": "cooking",
+    "recipe": null,
+    "substitutes": ["item_5552", "item_5553"],
+    "icon": "icons/item_5544.webp"
+  },
+  "item_5552": {
+    "name_en": "High-quality Chanterelle",
+    "name_tr": "Yüksek Kalite Şanterel Mantarı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_5544.webp"
+  },
+  "item_5553": {
+    "name_en": "Special Chanterelle",
+    "name_tr": "Özel Şanterel Mantarı",
+    "tier": "raw",
     "recipe": null,
     "icon": "icons/item_5544.webp"
   },
@@ -11590,6 +11953,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_7361", "item_7362"],
     "icon": "icons/item_7360.webp"
   },
   "item_7361": {
@@ -11654,6 +12018,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_820121", "item_820122"],
     "icon": "icons/item_820120.webp"
   },
   "item_820123": {
@@ -11662,6 +12027,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_820124", "item_820125"],
     "icon": "icons/item_820123.webp"
   },
   "item_820124": {
@@ -11734,6 +12100,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_820129", "item_820130"],
     "icon": "icons/item_820117.webp"
   },
   "item_9076": {

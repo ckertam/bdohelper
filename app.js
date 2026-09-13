@@ -932,6 +932,18 @@ function substituteGroupName(group) {
   return (lang === "tr" ? group.nameTr : group.nameEn) || group.nameTr || group.nameEn || "";
 }
 
+// computeAll'ın "have" hesabıyla birebir aynı mantık, ama recipe ağacında
+// hiç talep edilmediği (allResults'ta karşılığı olmadığı) için computeAll'ın
+// hiç işlemediği bir ikame maddesi için de çalışır — ör. kullanıcı bir
+// tarifte geçmeyen "Özel Biber" stoğunu girdiğinde, o madde `results`'ta
+// yoktur ama stoğu yine de ana maddenin ikame toplamına sayılmalıdır.
+function rawHaveFor(id) {
+  const item = getItem(id);
+  const isElixir = item.tier === "elixir";
+  const higherHave = isElixir ? (stockHigh[id] || 0) : 0;
+  return (stock[id] || 0) + higherHave * HIGHER_GRADE_RATIO;
+}
+
 // Bir maddenin kendi stoğu + grubundaki diğer üyelerin stoğunun (kendi
 // birimine oranla çevrilmiş) toplamı. Grubu yoksa `node.have` ile birebir
 // aynıdır — computeAll'ın kendi `missing` alanı bundan ETKİLENMEZ, sadece
@@ -945,9 +957,7 @@ function getEffectiveHave(node, allResults) {
   let total = node.have;
   group.members.forEach((m) => {
     if (m.id === node.id) return;
-    const other = allResults[m.id];
-    if (!other) return;
-    total += other.have * (self.factor / m.factor);
+    total += rawHaveFor(m.id) * (self.factor / m.factor);
   });
   return total;
 }
