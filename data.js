@@ -5205,6 +5205,7 @@ const RECIPES = {
     "name_tr": "Saf Su",
     "tier": "raw",
     "recipe": null,
+    "substitutes": [{ "id": "item_6651", "ratio": 0.5 }, { "id": "item_9059", "ratio": 0.3333333333333333 }],
     "icon": "icons/item_6656.webp"
   },
   "item_517": {
@@ -5925,7 +5926,22 @@ const RECIPES = {
     "name_tr": "Elma",
     "tier": "raw",
     "recipe": null,
+    "substitutes": [{ "id": "item_7304", "ratio": 0.5 }, { "id": "item_7321", "ratio": 0.08333333333333333 }, { "id": "item_7322", "ratio": 0.013888888888888888 }],
     "icon": "icons/item_7313.webp"
+  },
+  "item_7321": {
+    "name_en": "High-quality Strawberry",
+    "name_tr": "Yüksek Kalite Çilek",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7304.webp"
+  },
+  "item_7322": {
+    "name_en": "Special Strawberry",
+    "name_tr": "Özel Çilek",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7304.webp"
   },
   "item_9015": {
     "name_en": "Olive Oil",
@@ -5967,6 +5983,7 @@ const RECIPES = {
     "name_tr": "Tuz",
     "tier": "raw",
     "recipe": null,
+    "substitutes": [{ "id": "item_9008", "ratio": 0.0625 }],
     "icon": "icons/item_9001.webp"
   },
   "item_9002": {
@@ -5974,6 +5991,7 @@ const RECIPES = {
     "name_tr": "Şeker",
     "tier": "raw",
     "recipe": null,
+    "substitutes": [{ "id": "item_9009", "ratio": 0.0625 }],
     "icon": "icons/item_9002.webp"
   },
   "item_5602": {
@@ -11517,6 +11535,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_9023"],
     "icon": "icons/item_9017.webp"
   },
   "item_7906": {
@@ -11525,7 +11544,71 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": [{ "id": "item_7905", "ratio": 2 }, "item_7912", "item_7901", "item_7903", "item_7925", "item_7957", "item_7902", "item_7910", "item_7904", "item_7911", "item_7913"],
     "icon": "icons/item_7906.webp"
+  },
+  "item_7912": {
+    "name_en": "Bear Meat",
+    "name_tr": "Ayı Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7901.webp"
+  },
+  "item_7901": {
+    "name_en": "Deer Meat",
+    "name_tr": "Geyik Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7901.webp"
+  },
+  "item_7903": {
+    "name_en": "Fox Meat",
+    "name_tr": "Tilki Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7901.webp"
+  },
+  "item_7925": {
+    "name_en": "Gazelle Meat",
+    "name_tr": "Ceylan Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7901.webp"
+  },
+  "item_7957": {
+    "name_en": "Goat Meat",
+    "name_tr": "Keçi Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7901.webp"
+  },
+  "item_7902": {
+    "name_en": "Lamb Meat",
+    "name_tr": "Kuzu Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7901.webp"
+  },
+  "item_7910": {
+    "name_en": "Raccoon Meat",
+    "name_tr": "Rakun Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7901.webp"
+  },
+  "item_7904": {
+    "name_en": "Rhino Meat",
+    "name_tr": "Gergedan Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7901.webp"
+  },
+  "item_7911": {
+    "name_en": "Weasel Meat",
+    "name_tr": "Gelincik Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7901.webp"
   },
   "item_9059": {
     "name_en": "Mineral Water",
@@ -11573,7 +11656,36 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_7311", "item_7312", { "id": "item_7333", "ratio": 0.16666666666666666 }, { "id": "item_7345", "ratio": 0.027777777777777776 }, { "id": "item_7334", "ratio": 0.16666666666666666 }, { "id": "item_7346", "ratio": 0.027777777777777776 }],
     "icon": "icons/item_7318.webp"
+  },
+  "item_7333": {
+    "name_en": "High-quality Tomato",
+    "name_tr": "Yüksek Kalite Domates",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7311.webp"
+  },
+  "item_7345": {
+    "name_en": "Special Tomato",
+    "name_tr": "Özel Domates",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7311.webp"
+  },
+  "item_7334": {
+    "name_en": "High-quality Paprika",
+    "name_tr": "Yüksek Kalite Paprika",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7312.webp"
+  },
+  "item_7346": {
+    "name_en": "Special Paprika",
+    "name_tr": "Özel Paprika",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7312.webp"
   },
   "item_7201": {
     "name_en": "Wheat Dough",
@@ -11581,6 +11693,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": [{ "id": "item_7205", "ratio": 0.25 }],
     "icon": "icons/item_7201.webp"
   },
   "item_9062": {
@@ -11613,7 +11726,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
-    "substitutes": ["item_7703", "item_7704"],
+    "substitutes": [{ "id": "item_7703", "ratio": 0.4 }, { "id": "item_7704", "ratio": 0.2 }],
     "icon": "icons/item_7702.webp"
   },
   "item_9063": {
@@ -11638,7 +11751,155 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_8513", "item_8546", "item_8514", "item_8532", "item_8515", "item_8511", "item_8533", { "id": "item_8213", "ratio": 0.5 }, { "id": "item_8246", "ratio": 0.5 }, { "id": "item_8634", "ratio": 0.5 }, { "id": "item_8544", "ratio": 0.5 }, { "id": "item_8214", "ratio": 0.5 }, { "id": "item_8232", "ratio": 0.5 }, { "id": "item_8215", "ratio": 0.5 }, { "id": "item_8233", "ratio": 0.5 }, { "id": "item_8334", "ratio": 0.25 }, { "id": "item_8244", "ratio": 0.25 }, { "id": "item_8512", "ratio": 0.2 }, { "id": "item_8664", "ratio": 0.2 }, { "id": "item_8212", "ratio": 0.1 }, { "id": "item_8376", "ratio": 0.1 }],
     "icon": "icons/item_8211.webp"
+  },
+  "item_8513": {
+    "name_en": "Dried Crab",
+    "name_tr": "Kurutulmuş Yengeç",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8513.webp"
+  },
+  "item_8546": {
+    "name_en": "Dried Crawfish",
+    "name_tr": "Kurutulmuş Kerevit",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8546.webp"
+  },
+  "item_8514": {
+    "name_en": "Dried Jellyfish",
+    "name_tr": "Kurutulmuş Denizanası",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8514.webp"
+  },
+  "item_8532": {
+    "name_en": "Dried Seahorse",
+    "name_tr": "Kurutulmuş Denizatı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8532.webp"
+  },
+  "item_8515": {
+    "name_en": "Dried Shellfish",
+    "name_tr": "Kurutulmuş Midye",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8515.webp"
+  },
+  "item_8511": {
+    "name_en": "Dried Squid",
+    "name_tr": "Kurutulmuş Kalamar",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8511.webp"
+  },
+  "item_8533": {
+    "name_en": "Dried Starfish",
+    "name_tr": "Kurutulmuş Denizyıldızı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8533.webp"
+  },
+  "item_8213": {
+    "name_en": "Crab",
+    "name_tr": "Yengeç",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8213.webp"
+  },
+  "item_8246": {
+    "name_en": "Crawfish",
+    "name_tr": "Kerevit",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8246.webp"
+  },
+  "item_8634": {
+    "name_en": "Dried Cuttlefish",
+    "name_tr": "Kurutulmuş Mürekkep Balığı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8634.webp"
+  },
+  "item_8544": {
+    "name_en": "Dried Terrapin",
+    "name_tr": "Kurutulmuş Tatlısu Kaplumbağası",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8544.webp"
+  },
+  "item_8214": {
+    "name_en": "Jellyfish",
+    "name_tr": "Denizanası",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8214.webp"
+  },
+  "item_8232": {
+    "name_en": "Seahorse",
+    "name_tr": "Denizatı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8232.webp"
+  },
+  "item_8215": {
+    "name_en": "Shellfish",
+    "name_tr": "Midye",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8215.webp"
+  },
+  "item_8233": {
+    "name_en": "Starfish",
+    "name_tr": "Denizyıldızı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8233.webp"
+  },
+  "item_8334": {
+    "name_en": "Cuttlefish",
+    "name_tr": "Mürekkep Balığı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8334.webp"
+  },
+  "item_8244": {
+    "name_en": "Terrapin",
+    "name_tr": "Tatlı Su Kaplumbağası",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8244.webp"
+  },
+  "item_8512": {
+    "name_en": "Dried Octopus",
+    "name_tr": "Kurutulmuş Ahtapot",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8512.webp"
+  },
+  "item_8664": {
+    "name_en": "Dried Red Snow Crab",
+    "name_tr": "Kurutulmuş Kırmızı Kar Yengeci",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8664.webp"
+  },
+  "item_8212": {
+    "name_en": "Octopus",
+    "name_tr": "Ahtapot",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8212.webp"
+  },
+  "item_8376": {
+    "name_en": "Red Snow Crab",
+    "name_tr": "Kırmızı Kar Yengeci",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8376.webp"
   },
   "item_54004": {
     "name_en": "High-quality Carrot",
@@ -11646,7 +11907,6 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
-    "substitutes": ["item_54005"],
     "icon": "icons/item_54004.webp"
   },
   "item_54005": {
@@ -11663,6 +11923,21 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": [{ "id": "item_7327", "ratio": 0.16666666666666666 }, { "id": "item_7339", "ratio": 0.027777777777777776 }],
+    "icon": "icons/item_7305.webp"
+  },
+  "item_7327": {
+    "name_en": "High-quality Hot Pepper",
+    "name_tr": "Yüksek Kalite Acı Biber",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7305.webp"
+  },
+  "item_7339": {
+    "name_en": "Special Hot Pepper",
+    "name_tr": "Özel Acı Biber",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_7305.webp"
   },
   "item_9016": {
@@ -11671,6 +11946,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_9015"],
     "icon": "icons/item_9016.webp"
   },
   "item_9061": {
@@ -11686,6 +11962,21 @@ const RECIPES = {
     "name_tr": "Soğan",
     "tier": "raw",
     "skill": "cooking",
+    "recipe": null,
+    "substitutes": [{ "id": "item_7325", "ratio": 0.16666666666666666 }, { "id": "item_7337", "ratio": 0.027777777777777776 }],
+    "icon": "icons/item_7303.webp"
+  },
+  "item_7325": {
+    "name_en": "High-quality Onion",
+    "name_tr": "Yüksek Kalite Soğan",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7303.webp"
+  },
+  "item_7337": {
+    "name_en": "Special Onion",
+    "name_tr": "Özel Soğan",
+    "tier": "raw",
     "recipe": null,
     "icon": "icons/item_7303.webp"
   },
@@ -11703,6 +11994,21 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": [{ "id": "item_7324", "ratio": 0.16666666666666666 }, { "id": "item_7336", "ratio": 0.027777777777777776 }],
+    "icon": "icons/item_7302.webp"
+  },
+  "item_7324": {
+    "name_en": "High-quality Garlic",
+    "name_tr": "Yüksek Kalite Sarımsak",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7302.webp"
+  },
+  "item_7336": {
+    "name_en": "Special Garlic",
+    "name_tr": "Özel Sarımsak",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_7302.webp"
   },
   "item_7921": {
@@ -11711,7 +12017,29 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": [{ "id": "item_7953", "ratio": 0.5 }, { "id": "item_7917", "ratio": 0.5 }, { "id": "item_7916", "ratio": 0.5 }],
     "icon": "icons/item_7921.webp"
+  },
+  "item_7953": {
+    "name_en": "Bird Meat",
+    "name_tr": "Kuş Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7916.webp"
+  },
+  "item_7917": {
+    "name_en": "Flamingo Meat",
+    "name_tr": "Flamingo Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7916.webp"
+  },
+  "item_7916": {
+    "name_en": "Kuku Bird Meat",
+    "name_tr": "Gugu Kuşu Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7916.webp"
   },
   "item_7301": {
     "name_en": "Pepper",
@@ -11719,7 +12047,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
-    "substitutes": ["item_7323", "item_7335"],
+    "substitutes": [{ "id": "item_7323", "ratio": 0.16666666666666666 }, { "id": "item_7335", "ratio": 0.027777777777777776 }],
     "icon": "icons/item_7301.webp"
   },
   "item_7908": {
@@ -11728,7 +12056,36 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": [{ "id": "item_7907", "ratio": 0.5 }, { "id": "item_7909", "ratio": 0.5 }, { "id": "item_7915", "ratio": 0.25 }, { "id": "item_7914", "ratio": 0.25 }],
     "icon": "icons/item_7908.webp"
+  },
+  "item_7907": {
+    "name_en": "Dinosaur Meat",
+    "name_tr": "Dinozor Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7907.webp"
+  },
+  "item_7909": {
+    "name_en": "Worm Meat",
+    "name_tr": "Solucan Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7907.webp"
+  },
+  "item_7915": {
+    "name_en": "Cheetah Dragon Meat",
+    "name_tr": "Çita Ejderhası Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7907.webp"
+  },
+  "item_7914": {
+    "name_en": "Waragon Meat",
+    "name_tr": "Varagon Eti",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7907.webp"
   },
   "item_8210": {
     "name_en": "Rockfish",
@@ -11744,7 +12101,22 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": [{ "id": "item_7919", "ratio": 0.2 }, { "id": "item_7920", "ratio": 0.1 }],
     "icon": "icons/item_7918.webp"
+  },
+  "item_7919": {
+    "name_en": "Well-Dried Jerky",
+    "name_tr": "İyi Kurutulmuş Pastırma",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7919.webp"
+  },
+  "item_7920": {
+    "name_en": "Rare Jerky",
+    "name_tr": "Az Pişmiş Pastırma",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7920.webp"
   },
   "item_7348": {
     "name_en": "Cinnamon",
@@ -11808,7 +12180,15 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": [{ "id": "item_8501", "ratio": 0.5 }, { "id": "item_8510", "ratio": 0.5 }, { "id": "item_8509", "ratio": 0.5 }, { "id": "item_8209", "ratio": 0.5 }, { "id": "item_8210", "ratio": 0.25 }],
     "icon": "icons/item_8201.webp"
+  },
+  "item_8209": {
+    "name_en": "Saurel",
+    "name_tr": "Karagöz",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_8209.webp"
   },
   "item_9731": {
     "name_en": "Soft Whale Meat",
@@ -11816,6 +12196,7 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": [{ "id": "item_9732", "ratio": 0.5 }],
     "icon": "icons/item_9731.webp"
   },
   "item_9735": {
@@ -11976,7 +12357,15 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": ["item_6521"],
     "icon": "icons/item_6511.webp"
+  },
+  "item_6521": {
+    "name_en": "Dried Lobster",
+    "name_tr": "Kurutulmuş Istakoz",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6521.webp"
   },
   "item_5515": {
     "name_en": "Rainbow Button Mushroom",
@@ -12016,7 +12405,50 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
+    "substitutes": [{ "id": "item_7005", "ratio": 0.5 }, { "id": "item_7003", "ratio": 0.5 }, { "id": "item_7006", "ratio": 0.16666666666666666 }, { "id": "item_7011", "ratio": 0.027777777777777776 }, { "id": "item_7010", "ratio": 0.16666666666666666 }, { "id": "item_7015", "ratio": 0.027777777777777776 }, { "id": "item_7008", "ratio": 0.16666666666666666 }, { "id": "item_7013", "ratio": 0.027777777777777776 }],
     "icon": "icons/item_7001.webp"
+  },
+  "item_7006": {
+    "name_en": "High-quality Wheat",
+    "name_tr": "Yüksek Kalite Buğday",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7001.webp"
+  },
+  "item_7011": {
+    "name_en": "Special Wheat",
+    "name_tr": "Özel Buğday",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7001.webp"
+  },
+  "item_7010": {
+    "name_en": "High-quality Corn",
+    "name_tr": "Yüksek Kalite Mısır",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7005.webp"
+  },
+  "item_7015": {
+    "name_en": "Special Corn",
+    "name_tr": "Özel Mısır",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7005.webp"
+  },
+  "item_7008": {
+    "name_en": "High-quality Potato",
+    "name_tr": "Yüksek Kalite Patates",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7003.webp"
+  },
+  "item_7013": {
+    "name_en": "Special Potato",
+    "name_tr": "Özel Patates",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_7003.webp"
   },
   "item_7955": {
     "name_en": "Marmot Meat",
@@ -12136,7 +12568,6 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
-    "substitutes": ["item_7361", "item_7362"],
     "icon": "icons/item_7360.webp"
   },
   "item_7361": {
@@ -12201,7 +12632,6 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
-    "substitutes": ["item_820121", "item_820122"],
     "icon": "icons/item_820120.webp"
   },
   "item_820123": {
@@ -12210,7 +12640,6 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
-    "substitutes": ["item_820124", "item_820125"],
     "icon": "icons/item_820123.webp"
   },
   "item_820124": {
@@ -12283,7 +12712,6 @@ const RECIPES = {
     "tier": "raw",
     "skill": "cooking",
     "recipe": null,
-    "substitutes": ["item_820129", "item_820130"],
     "icon": "icons/item_820117.webp"
   },
   "item_9076": {
