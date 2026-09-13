@@ -501,6 +501,7 @@ const STRINGS = {
     footer: 'Veriler <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a> kaynak alınarak hazırlanmıştır. Oyun içi güncellemelerle miktarlar değişebilir.',
     sections: {
       final: "ANA ÜRÜN",
+      party: "GRUP İKSİRİ",
       mid: "ÖZ İKSİR",
       elixir: "İKSİR",
       craftable: "REAKTİF / KRİSTAL",
@@ -602,6 +603,7 @@ const STRINGS = {
     footer: 'Data sourced from <a href="https://bdocodex.com" target="_blank" rel="noopener">bdocodex.com</a>. Quantities may change with game updates.',
     sections: {
       final: "FINAL PRODUCT",
+      party: "PARTY DRAUGHT",
       mid: "DRAUGHT",
       elixir: "ELIXIR",
       craftable: "REAGENT / CRYSTAL",
@@ -959,7 +961,7 @@ function sectionOf(node) {
   return node.tier || "craftable";
 }
 
-const SECTION_ORDER = ["raw", "craftable", "elixir", "mid", "final"];
+const SECTION_ORDER = ["raw", "craftable", "elixir", "mid", "final", "party"];
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Render katmanı — buradan itibaren SADECE sunum/DOM. Yukarıdaki hesap motoru
@@ -2314,7 +2316,7 @@ function populateSelect(preserveSelection) {
   const prevValue = preserveSelection ? itemSelect.value : null;
   itemSelect.innerHTML = "";
 
-  const byTier = { final: [], mid: [], elixir: [], craftable: [] };
+  const byTier = { party: [], final: [], mid: [], elixir: [], craftable: [] };
   Object.entries(RECIPES.items).forEach(([id, item]) => {
     if (!item.recipe) return; // sadece üretilebilen maddeler seçilebilir
     if ((item.skill || "alchemy") !== skill) return; // sadece seçili meslekteki hedefler
@@ -2323,7 +2325,7 @@ function populateSelect(preserveSelection) {
     byTier[tier].push({ id, item });
   });
 
-  ["final", "mid", "elixir", "craftable"].forEach((tier) => {
+  ["party", "final", "mid", "elixir", "craftable"].forEach((tier) => {
     const group = byTier[tier];
     if (!group || group.length === 0) return;
     const optgroup = document.createElement("optgroup");

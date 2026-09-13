@@ -60,6 +60,58 @@ const RECIPES = {
     "icon": "icons/item_1399.webp",
     "skill": "alchemy"
   },
+  "item_1407": {
+    "name_en": "[Party] Harmony Draught - Edania",
+    "name_tr": "[Grup] Ahenk Öz İksiri - Edania",
+    "tier": "party",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_1399",
+          "qty": 1
+        },
+        {
+          "item": "item_1409",
+          "qty": 3
+        },
+        {
+          "item": "item_702",
+          "qty": 3
+        },
+        {
+          "item": "item_820936",
+          "qty": 1
+        }
+      ]
+    },
+    "note_tr": "2025-08-21 yaması ile eklendi. Her iksirin üst kaliteli (Advanced/Endless vb.) versiyonu 1:3 oranında yerine geçebilir.",
+    "note_en": "Added in the August 21, 2025 patch. A higher-grade version (Advanced/Endless etc.) of each elixir can substitute at a 1:3 ratio.",
+    "icon": "icons/item_1407.webp",
+    "skill": "alchemy"
+  },
+  "item_1408": {
+    "name_en": "[Party] Immortal: Harmony Draught - Edania",
+    "name_tr": "[Grup] Ölümsüz: Ahenk Öz İksiri - Edania",
+    "tier": "party",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_1407",
+          "qty": 1
+        },
+        {
+          "item": "item_1178",
+          "qty": 6
+        }
+      ]
+    },
+    "note_tr": "2025-08-21 yaması ile eklendi. Karakter ölümünde etkinin düşmemesini sağlayan Ölümsüzlük Yağı ile güçlendirilmiş versiyon.",
+    "note_en": "Added in the August 21, 2025 patch. An infused version that persists through character death.",
+    "icon": "icons/item_1408.webp",
+    "skill": "alchemy"
+  },
   "item_1389": {
     "name_en": "Fury Draught",
     "name_tr": "Öfke Öz İksiri",
@@ -4937,6 +4989,28 @@ const RECIPES = {
     "icon": "icons/item_1413.webp",
     "skill": "alchemy"
   },
+  "item_1414": {
+    "name_en": "Immortal: Perfume of Tenacity",
+    "name_tr": "Ölümsüz: Kararlılık Parfümü",
+    "tier": "craftable",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_1413",
+          "qty": 1
+        },
+        {
+          "item": "item_1178",
+          "qty": 6
+        }
+      ]
+    },
+    "note_tr": "2025-08-21 yaması ile eklendi. Karakter ölümünde etkinin düşmemesini sağlayan Ölümsüzlük Yağı ile güçlendirilmiş versiyon.",
+    "note_en": "Added in the August 21, 2025 patch. An infused version that persists through character death.",
+    "icon": "icons/item_1414.webp",
+    "skill": "alchemy"
+  },
   "item_1411": {
     "name_en": "Perfume of Envy",
     "name_tr": "Tutku Parfümü",
@@ -4968,6 +5042,105 @@ const RECIPES = {
     },
     "icon": "icons/item_1411.webp",
     "skill": "alchemy"
+  },
+  "item_1412": {
+    "name_en": "Immortal: Perfume of Envy",
+    "name_tr": "Ölümsüz: Tutku Parfümü",
+    "tier": "craftable",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_1411",
+          "qty": 1
+        },
+        {
+          "item": "item_1178",
+          "qty": 6
+        }
+      ]
+    },
+    "note_tr": "2025-08-21 yaması ile eklendi. Karakter ölümünde etkinin düşmemesini sağlayan Ölümsüzlük Yağı ile güçlendirilmiş versiyon.",
+    "note_en": "Added in the August 21, 2025 patch. An infused version that persists through character death.",
+    "icon": "icons/item_1412.webp",
+    "skill": "alchemy"
+  },
+  "item_15288": {
+    "name_en": "Crystal of Breathing Verdure",
+    "name_tr": "Nefes Alan Yeşillik Kristali",
+    "tier": "craftable",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_15226",
+          "qty": 1
+        },
+        {
+          "item": "item_15227",
+          "qty": 1
+        },
+        {
+          "item": "item_821256",
+          "qty": 1
+        }
+      ]
+    },
+    "note_tr": "2025-08-21 yaması ile eklendi. Yaşam Becerisi kristal soketine takılan, Yaşam EXP +%7 ve Yaşam Becerisi Mastery +15 veren aksesuar; üretim tarifi ama kullanımı yaşam becerisi soketlemesidir.",
+    "note_en": "Added in the August 21, 2025 patch. A Life Skill crystal-socket item granting Life EXP +7% and Life Skill Mastery +15; craftable via Alchemy but used as a socketed accessory, not consumed.",
+    "icon": "icons/item_15288.webp",
+    "skill": "alchemy"
+  },
+  "item_821256": {
+    "name_en": "Essence of Verdure",
+    "name_tr": "Yeşillik Özü",
+    "tier": "craftable",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_821255",
+          "qty": 100
+        },
+        {
+          "item": "item_4998",
+          "qty": 100
+        },
+        {
+          "item": "item_4918",
+          "qty": 100
+        },
+        {
+          "item": "item_766108",
+          "qty": 200
+        }
+      ]
+    },
+    "note_tr": "2025-08-21 yaması ile eklendi.",
+    "note_en": "Added in the August 21, 2025 patch.",
+    "icon": "icons/item_821256.webp",
+    "skill": "alchemy"
+  },
+  "item_15226": {
+    "name_en": "Life Crystal",
+    "name_tr": "Yaşam Kristali",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_15226.webp"
+  },
+  "item_15227": {
+    "name_en": "Vital Crystal",
+    "name_tr": "Canlılık Kristali",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_15227.webp"
+  },
+  "item_4998": {
+    "name_en": "Sharp Black Crystal Shard",
+    "name_tr": "Keskin Kara Kristal Parçası",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_4998.webp"
   },
   "item_5403": {
     "name_en": "Fire Flake Flower",
