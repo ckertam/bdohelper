@@ -5393,6 +5393,42 @@ const RECIPES = {
     "name_tr": "Tilki Kanı",
     "tier": "raw",
     "recipe": null,
+    "substitutes": ["item_6224", { "id": "item_6226", "ratio": 0.5 }, { "id": "item_6211", "ratio": 0.5 }, { "id": "item_6210", "ratio": 0.5 }, { "id": "item_6212", "ratio": 0.5 }],
+    "icon": "icons/item_6203.webp"
+  },
+  "item_6224": {
+    "name_en": "Scorpion Blood",
+    "name_tr": "Akrep Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6203.webp"
+  },
+  "item_6226": {
+    "name_en": "Marmot Blood",
+    "name_tr": "Marmot Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6203.webp"
+  },
+  "item_6211": {
+    "name_en": "Monkey Blood",
+    "name_tr": "Maymun Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6203.webp"
+  },
+  "item_6210": {
+    "name_en": "Raccoon Blood",
+    "name_tr": "Rakun Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6203.webp"
+  },
+  "item_6212": {
+    "name_en": "Weasel Blood",
+    "name_tr": "Gelincik Kanı",
+    "tier": "raw",
+    "recipe": null,
     "icon": "icons/item_6203.webp"
   },
   "item_520": {
@@ -5427,6 +5463,42 @@ const RECIPES = {
   "item_6213": {
     "name_en": "Bear Blood",
     "name_tr": "Ayı Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": ["item_6223", "item_6225", { "id": "item_6207", "ratio": 0.5 }, { "id": "item_6221", "ratio": 0.5 }, { "id": "item_6220", "ratio": 0.5 }],
+    "icon": "icons/item_6213.webp"
+  },
+  "item_6223": {
+    "name_en": "Lion Blood",
+    "name_tr": "Aslan Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6213.webp"
+  },
+  "item_6225": {
+    "name_en": "Yak Blood",
+    "name_tr": "Yak Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6213.webp"
+  },
+  "item_6207": {
+    "name_en": "Dinosaur Blood",
+    "name_tr": "Dinozor Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6213.webp"
+  },
+  "item_6221": {
+    "name_en": "Ogre Blood",
+    "name_tr": "Ogre Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6213.webp"
+  },
+  "item_6220": {
+    "name_en": "Troll Blood",
+    "name_tr": "Trol Kanı",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_6213.webp"
@@ -5485,6 +5557,28 @@ const RECIPES = {
   "item_6214": {
     "name_en": "Wolf Blood",
     "name_tr": "Kurt Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": ["item_6204", { "id": "item_6216", "ratio": 0.5 }, { "id": "item_6218", "ratio": 0.5 }],
+    "icon": "icons/item_6214.webp"
+  },
+  "item_6204": {
+    "name_en": "Rhino Blood",
+    "name_tr": "Gergedan Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6214.webp"
+  },
+  "item_6216": {
+    "name_en": "Cheetah Dragon Blood",
+    "name_tr": "Çita Ejderhası Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6214.webp"
+  },
+  "item_6218": {
+    "name_en": "Flamingo Blood",
+    "name_tr": "Flamingo Kanı",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_6214.webp"
@@ -5637,6 +5731,42 @@ const RECIPES = {
   "item_6205": {
     "name_en": "Pig Blood",
     "name_tr": "Domuz Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": [{ "id": "item_6201", "ratio": 0.5 }, { "id": "item_6228", "ratio": 0.5 }, { "id": "item_6227", "ratio": 0.5 }, { "id": "item_6206", "ratio": 0.5 }, { "id": "item_6202", "ratio": 0.5 }, { "id": "item_6215", "ratio": 0.5 }],
+    "icon": "icons/item_6205.webp"
+  },
+  "item_6228": {
+    "name_en": "Goat Blood",
+    "name_tr": "Keçi Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6205.webp"
+  },
+  "item_6227": {
+    "name_en": "Llama Blood",
+    "name_tr": "Lama Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6205.webp"
+  },
+  "item_6206": {
+    "name_en": "Ox Blood",
+    "name_tr": "Öküz Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6205.webp"
+  },
+  "item_6202": {
+    "name_en": "Sheep Blood",
+    "name_tr": "Koyun Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6205.webp"
+  },
+  "item_6215": {
+    "name_en": "Waragon Blood",
+    "name_tr": "Varagon Kanı",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_6205.webp"
@@ -6600,6 +6730,28 @@ const RECIPES = {
   "item_6208": {
     "name_en": "Lizard Blood",
     "name_tr": "Kertenkele Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "substitutes": [{ "id": "item_6219", "ratio": 0.5 }, { "id": "item_6222", "ratio": 0.5 }, { "id": "item_6217", "ratio": 0.5 }, { "id": "item_6209", "ratio": 0.5 }],
+    "icon": "icons/item_6208.webp"
+  },
+  "item_6222": {
+    "name_en": "Cobra Blood",
+    "name_tr": "Kobra Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6208.webp"
+  },
+  "item_6217": {
+    "name_en": "Kuku Bird Blood",
+    "name_tr": "Gugu Kuşu Kanı",
+    "tier": "raw",
+    "recipe": null,
+    "icon": "icons/item_6208.webp"
+  },
+  "item_6209": {
+    "name_en": "Worm Blood",
+    "name_tr": "Solucan Kanı",
     "tier": "raw",
     "recipe": null,
     "icon": "icons/item_6208.webp"
