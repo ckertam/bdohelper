@@ -60,9 +60,173 @@ const RECIPES = {
     "icon": "icons/item_1399.webp",
     "skill": "alchemy"
   },
+  "item_1400": {
+    "name_en": "Immortal: Harmony Draught",
+    "name_tr": "Ölümsüz: Ahenk Öz İksiri",
+    "tier": "final",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_1399",
+          "qty": 1
+        },
+        {
+          "item": "item_1178",
+          "qty": 6
+        }
+      ]
+    },
+    "icon": "icons/item_1400.webp",
+    "skill": "alchemy"
+  },
+  "item_1401": {
+    "name_en": "[Party] Harmony Draught - Human",
+    "name_tr": "[Parti] Ahenk Öz İksiri - İnsan",
+    "tier": "party",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_1399",
+          "qty": 1
+        },
+        {
+          "item": "item_670",
+          "qty": 3
+        },
+        {
+          "item": "item_702",
+          "qty": 3
+        },
+        {
+          "item": "item_820936",
+          "qty": 1
+        }
+      ]
+    },
+    "icon": "icons/item_1401.webp",
+    "skill": "alchemy"
+  },
+  "item_1402": {
+    "name_en": "[Party] Immortal: Harmony Draught - Human",
+    "name_tr": "[Parti] Ölümsüz: Ahenk Öz İksiri - İnsan",
+    "tier": "party",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_1401",
+          "qty": 1
+        },
+        {
+          "item": "item_1178",
+          "qty": 6
+        }
+      ]
+    },
+    "icon": "icons/item_1402.webp",
+    "skill": "alchemy"
+  },
+  "item_1403": {
+    "name_en": "[Party] Harmony Draught - Demihuman",
+    "name_tr": "[Parti] Ahenk Öz İksiri - Yarı İnsan",
+    "tier": "party",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_1399",
+          "qty": 1
+        },
+        {
+          "item": "item_678",
+          "qty": 3
+        },
+        {
+          "item": "item_702",
+          "qty": 3
+        },
+        {
+          "item": "item_820936",
+          "qty": 1
+        }
+      ]
+    },
+    "icon": "icons/item_1403.webp",
+    "skill": "alchemy"
+  },
+  "item_1404": {
+    "name_en": "[Party] Immortal: Harmony Draught - Demihuman",
+    "name_tr": "[Parti] Ölümsüz: Ahenk Öz İksiri - Yarı İnsan",
+    "tier": "party",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_1403",
+          "qty": 1
+        },
+        {
+          "item": "item_1178",
+          "qty": 6
+        }
+      ]
+    },
+    "icon": "icons/item_1404.webp",
+    "skill": "alchemy"
+  },
+  "item_1405": {
+    "name_en": "[Party] Harmony Draught - Kamasylvia",
+    "name_tr": "[Parti] Ahenk Öz İksiri - Kamasylvia",
+    "tier": "party",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_1399",
+          "qty": 1
+        },
+        {
+          "item": "item_740",
+          "qty": 3
+        },
+        {
+          "item": "item_702",
+          "qty": 3
+        },
+        {
+          "item": "item_820936",
+          "qty": 1
+        }
+      ]
+    },
+    "icon": "icons/item_1405.webp",
+    "skill": "alchemy"
+  },
+  "item_1406": {
+    "name_en": "[Party] Immortal: Harmony Draught - Kamasylvia",
+    "name_tr": "[Parti] Ölümsüz: Ahenk Öz İksiri - Kamasylvia",
+    "tier": "party",
+    "recipe": {
+      "output_qty": 1,
+      "ingredients": [
+        {
+          "item": "item_1405",
+          "qty": 1
+        },
+        {
+          "item": "item_1178",
+          "qty": 6
+        }
+      ]
+    },
+    "icon": "icons/item_1406.webp",
+    "skill": "alchemy"
+  },
   "item_1407": {
     "name_en": "[Party] Harmony Draught - Edania",
-    "name_tr": "[Grup] Ahenk Öz İksiri - Edania",
+    "name_tr": "[Parti] Ahenk Öz İksiri - Edania",
     "tier": "party",
     "recipe": {
       "output_qty": 1,
@@ -92,7 +256,7 @@ const RECIPES = {
   },
   "item_1408": {
     "name_en": "[Party] Immortal: Harmony Draught - Edania",
-    "name_tr": "[Grup] Ölümsüz: Ahenk Öz İksiri - Edania",
+    "name_tr": "[Parti] Ölümsüz: Ahenk Öz İksiri - Edania",
     "tier": "party",
     "recipe": {
       "output_qty": 1,
